@@ -6,7 +6,7 @@
 	"namespace": "ZbxViewConnect",
 	"version": "1.0.0",
 	"author": "Radek Pavlík",
-	"url": "https://github.com/Globus-CR-v-o-s/zabbix-module-zbxview-connect",
+	"url": "https://github.com/RadekPavlik/zabbix-module-zbxview-connect",
 	"description": "Connect the ZbxView / Zabbix mobile app with a QR code: creates an API token for the signed-in user and shows it as a code the app scans to add this server.",
 	"actions": {
 		"zbxview.connect": {
