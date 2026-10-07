@@ -1,0 +1,22 @@
+<?php
+// Renders the page body (form + result) to HTML with the module's own view,
+// for a screenshot outside a logged-in browser.
+class CWebUser { public static $data = ['lang' => 'en_US']; public static function get($k) { return self::$data[$k] ?? null; } }
+require_once __DIR__.'/boot_common.php';
+if (!function_exists('_x')) { function _x($s, $c) { return $s; } }
+require_once '/usr/share/zabbix/include/translateDefines.inc.php';
+CWebUser::$data['lang'] = $argv[1] ?? 'en_US';
+$M = dirname(__DIR__);
+require_once "$M/includes/Lang.php";
+// CHtmlPage::show() prints the whole page frame; only the content is wanted.
+class _Page { private array $items = []; private string $title = '';
+	public function setTitle($t) { $this->title = $t; return $this; }
+	public function addItem($i) { $this->items[] = $i; return $this; }
+	public function show() { echo '<header class="header-title"><h1>'.htmlspecialchars($this->title).'</h1></header><main>';
+		foreach ($this->items as $i) echo $i; echo '</main>'; } }
+$src = file_get_contents("$M/views/connect.view.php");
+$src = str_replace('(new CHtmlPage())', '(new _Page())', $src);
+$data = ['title' => Modules\ZbxViewConnect\Includes\Lang::t('title', 'Connect application'),
+	'url' => 'https://zabbix-app.globus.cz', 'name' => 'Globus Zabbix', 'user' => 'Radek', 'api_access' => ($argv[2] ?? '1') === '1',
+	'csrf' => 'x', 'tokens_url' => '#'];
+eval('?>'.$src);

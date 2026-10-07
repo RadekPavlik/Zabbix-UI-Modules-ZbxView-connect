@@ -1,0 +1,71 @@
+/* ZbxView Connect - uses the theme's own colours (blue/dark/high-contrast). */
+.zvc {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px;
+	align-items: flex-start;
+	padding: 4px 0 24px;
+}
+
+.zvc-card {
+	box-sizing: border-box;
+	width: 460px;
+	max-width: 100%;
+	padding: 18px 20px;
+	border: 1px solid rgba(127, 127, 127, .3);
+	border-radius: 6px;
+}
+
+.zvc-h { margin: 0 0 6px; font-size: 16px; font-weight: bold; }
+.zvc-intro { margin-bottom: 14px; line-height: 1.5; opacity: .85; }
+
+.zvc-field { margin-bottom: 12px; }
+.zvc-label { display: block; margin-bottom: 4px; font-weight: bold; }
+.zvc-field input[type="text"] { box-sizing: border-box; width: 100%; }
+.zvc-hint { margin-top: 4px; font-size: 11px; line-height: 1.4; opacity: .7; }
+
+.zvc-check { display: flex; align-items: center; gap: 6px; margin: 4px 0 16px; }
+
+.zvc-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 4px; }
+.zvc-error { color: #e45959; }
+
+.zvc-qr {
+	width: 260px;
+	max-width: 100%;
+	margin: 10px auto 14px;
+	padding: 8px;
+	border-radius: 6px;
+	/* Scanners need dark modules on light ground, also in the dark theme. */
+	background: #fff;
+}
+
+.zvc-qr svg { display: block; width: 100%; height: auto; }
+
+.zvc-facts {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: 4px 14px;
+	margin-bottom: 12px;
+}
+
+.zvc-k { opacity: .7; }
+
+.zvc-warn {
+	margin: 0 0 14px;
+	padding: 10px 12px;
+	border-radius: 6px;
+	line-height: 1.45;
+	background: rgba(255, 200, 89, .18);
+	border: 1px solid rgba(255, 200, 89, .55);
+}
+
+.zvc-btn-link {
+	display: inline-block;
+	padding: 6px 12px;
+	border-radius: 2px;
+	background: #0275b8;
+	color: #fff !important;
+	text-decoration: none !important;
+}
+
+.zvc-hidden { display: none; }
