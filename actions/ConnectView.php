@@ -5,20 +5,17 @@ namespace Modules\ZbxViewConnect\Actions;
 use CController;
 use CControllerResponseData;
 use CCsrfTokenHelper;
-use CProfile;
 use CRoleHelper;
 use CWebUser;
 use Modules\ZbxViewConnect\Includes\Lang;
+use Modules\ZbxViewConnect\Includes\Pairing;
 
 /**
- * The "Connect application" page: a short form (name, address the phone
- * reaches, token validity) whose result - a QR code - is drawn by
- * connect.js once ConnectCreate has made the token.
+ * The "Connect application" page. Not paired yet: connect.js asks
+ * ConnectCreate for a code right away. Paired: the page shows since when and
+ * offers "Pair again", which replaces the token.
  */
 class ConnectView extends CController {
-
-	public const PROFILE_URL = 'web.zbxviewconnect.url';
-	public const PROFILE_NAME = 'web.zbxviewconnect.name';
 
 	protected function init(): void {
 		$this->disableCsrfValidation();
@@ -33,34 +30,18 @@ class ConnectView extends CController {
 	}
 
 	protected function doAction(): void {
-		global $ZBX_SERVER_NAME;
+		$active = Pairing::active((string) CWebUser::$data['userid']);
 
 		$this->setResponse(new CControllerResponseData([
 			'title' => Lang::t('title', 'Connect application'),
-			'url' => CProfile::get(self::PROFILE_URL, self::frontendUrl()),
-			'name' => CProfile::get(self::PROFILE_NAME,
-				isset($ZBX_SERVER_NAME) && $ZBX_SERVER_NAME !== '' ? $ZBX_SERVER_NAME : 'Zabbix'
-			),
-			'user' => getUserFullname(CWebUser::$data),
 			// A token is useless to the app when the role may not use the API.
 			'api_access' => CWebUser::checkAccess('api.access'),
-			'csrf' => CCsrfTokenHelper::get('zbxview.connect.create'),
-			'tokens_url' => 'zabbix.php?action=user.token.list'
+			'paired' => $active !== null,
+			'created' => $active !== null ? zbx_date2str(DATE_TIME_FORMAT, (int) $active['created_at']) : '',
+			'lastaccess' => $active !== null && (int) $active['lastaccess'] > 0
+				? zbx_date2str(DATE_TIME_FORMAT, (int) $active['lastaccess'])
+				: Lang::t('never_used', 'not yet'),
+			'csrf' => CCsrfTokenHelper::get('zbxview.connect.create')
 		]));
-	}
-
-	/**
-	 * This frontend's address as the browser reached it, e.g.
-	 * https://zabbix.example.com/zabbix - a starting point the user corrects
-	 * when the phone goes through another address (relay, Cloudflare).
-	 */
-	public static function frontendUrl(): string {
-		$https = (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off')
-			|| strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
-		$host = (string) ($_SERVER['HTTP_X_FORWARDED_HOST'] ?? $_SERVER['HTTP_HOST'] ?? 'localhost');
-		$host = trim(explode(',', $host)[0]);
-		$path = rtrim(str_replace('\\', '/', dirname((string) ($_SERVER['SCRIPT_NAME'] ?? '/'))), '/');
-
-		return ($https ? 'https' : 'http').'://'.$host.$path;
 	}
 }

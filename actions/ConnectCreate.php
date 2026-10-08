@@ -5,20 +5,22 @@ namespace Modules\ZbxViewConnect\Actions;
 use API;
 use CController;
 use CControllerResponseData;
-use CProfile;
 use CRoleHelper;
 use CWebUser;
 use Modules\ZbxViewConnect\Includes\Lang;
+use Modules\ZbxViewConnect\Includes\Pairing;
 
 /**
- * Creates an API token for the signed-in user and returns the zbxview://add
- * link the QR code carries. The token is the user's own (listed under User
- * settings - API tokens, where it can be disabled or deleted) and is
- * returned only this once.
+ * Pairs the app: creates a never-expiring API token for the signed-in user
+ * and returns the zbxview://add link the QR code carries.
+ *
+ * - repair=0 (first pairing): refused when the user is already paired, so a
+ *   reload or a second tab never creates tokens behind the user's back.
+ * - repair=1 ("Pair again"): the new token is created first, then the user's
+ *   older ZbxView tokens are deleted - the previously paired phone loses
+ *   access, the new one has it. Nothing is deleted if creation fails.
  */
 class ConnectCreate extends CController {
-
-	private const VALIDITY_DAYS = [30, 90, 365, 0];
 
 	protected function init(): void {
 		// The page posts JSON, with the CSRF token in the body.
@@ -26,24 +28,10 @@ class ConnectCreate extends CController {
 	}
 
 	protected function checkInput(): bool {
-		$ret = $this->validateInput([
-			'name' => 'required|string|not_empty',
-			'url' => 'required|string|not_empty',
-			'days' => 'required|in '.implode(',', self::VALIDITY_DAYS),
-			'self_signed' => 'in 0,1'
-		]);
-
-		if ($ret) {
-			$url = parse_url(trim((string) $this->getInput('url')));
-
-			if (!is_array($url) || !in_array(strtolower($url['scheme'] ?? ''), ['http', 'https'], true)
-					|| ($url['host'] ?? '') === '') {
-				$ret = false;
-			}
-		}
+		$ret = $this->validateInput(['repair' => 'in 0,1']);
 
 		if (!$ret) {
-			$this->respond(['error' => Lang::t('err_url', 'Enter the address as https://host/path.')]);
+			$this->respond(['error' => Lang::t('err_create', 'The API token could not be created.')]);
 		}
 
 		return $ret;
@@ -54,26 +42,35 @@ class ConnectCreate extends CController {
 	}
 
 	protected function doAction(): void {
-		$name = trim((string) $this->getInput('name'));
-		$url = rtrim(trim((string) $this->getInput('url')), '/');
-		$days = (int) $this->getInput('days');
-		$self_signed = (int) $this->getInput('self_signed', 0) === 1;
+		$userid = (string) CWebUser::$data['userid'];
+		$repair = (int) $this->getInput('repair', 0) === 1;
 
-		// Remembered per user, so a second phone starts from the same answers.
-		CProfile::update(ConnectView::PROFILE_URL, $url, PROFILE_TYPE_STR);
-		CProfile::update(ConnectView::PROFILE_NAME, $name, PROFILE_TYPE_STR);
+		if (!$repair && Pairing::active($userid) !== null) {
+			$this->respond(['paired' => true]);
+
+			return;
+		}
+
+		$client_cert = Pairing::clientCert();
+
+		if (isset($client_cert['error'])) {
+			// Configured but unusable: say so before any token is made.
+			$this->respond(['error' => Lang::t('err_cert_'.$client_cert['error'],
+				'The client certificate in the module configuration cannot be used.')]);
+
+			return;
+		}
+
+		$old = array_column(Pairing::tokens($userid), 'tokenid');
 
 		$now = time();
-		$token_name = 'ZbxView '.date('Y-m-d H:i:s', $now);
-		$expires = $days > 0 ? $now + $days * 86400 : 0;
+		$token_name = Pairing::TOKEN_PREFIX.date('Y-m-d H:i:s', $now);
 
 		$result = API::Token()->create([
-			// Token names are unique per user; the timestamp keeps them apart
-			// and tells which phone was connected when.
 			'name' => $token_name,
 			'description' => Lang::t('token_description', 'Created by ZbxView connect for the mobile app.'),
-			'userid' => CWebUser::$data['userid'],
-			'expires_at' => $expires,
+			'userid' => $userid,
+			'expires_at' => 0,
 			'status' => ZBX_AUTH_TOKEN_ENABLED
 		]);
 
@@ -87,18 +84,32 @@ class ConnectCreate extends CController {
 
 		[['token' => $token]] = API::Token()->generate($result['tokenids']);
 
+		// Only now that the new token exists: one phone, one token.
+		if ($old) {
+			API::Token()->delete($old);
+		}
+
+		$server = Pairing::server();
+
 		$link = 'zbxview://add?'.http_build_query([
-			'url' => $url,
-			'name' => $name,
+			'url' => $server['url'],
+			'name' => $server['name'],
 			'auth' => 'token',
 			'token' => $token,
-			'self_signed' => $self_signed ? '1' : '0'
-		], '', '&', PHP_QUERY_RFC3986);
+			'self_signed' => $server['self_signed'] ? '1' : '0'
+		] + ($server['pin'] !== '' ? ['pin' => $server['pin']] : [])
+		+ ($client_cert ? array_filter([
+			'cc' => $client_cert['cc'],
+			'ck' => $client_cert['ck'],
+			'ch' => $client_cert['ch']
+		], 'strlen') : []), '', '&', PHP_QUERY_RFC3986);
 
 		$this->respond([
 			'link' => $link,
+			// Several codes shown in turn when the link is too big for one.
+			'parts' => Pairing::split($link),
 			'token_name' => $token_name,
-			'expires' => $expires > 0 ? zbx_date2str(DATE_FORMAT, $expires) : Lang::t('never', 'Never'),
+			'replaced' => count($old),
 			'tail' => substr($token, -4)
 		]);
 	}

@@ -30,32 +30,63 @@ module.create  {"id": "zbxviewconnect", "relative_path": "modules/Zabbix-UI-Modu
 
 ## What the page does
 
-| Field | Meaning |
-|---|---|
-| Name in the app | Label of the server in the app (default: the frontend's server name) |
-| Server address | URL the **phone** reaches this Zabbix at — prefilled with the browser's, change it when phones come through a relay / Cloudflare. Remembered per user. |
-| Token valid for | 30 days, 90 days (default), 1 year, never |
-| Self-signed certificate | Tells the app to pin the server's certificate on first connect |
+- **First open**: the QR code appears immediately - no questions. In the app:
+  *Add server → Scan QR code*.
+- **Later**: the page shows when the app was paired and last used, and a
+  **Pair again** button (new phone, reinstalled app, lost phone). Pairing
+  again replaces the token: the previous phone stops working.
+- The token (`ZbxView <date time>`, under *User settings → API tokens*) never
+  expires. One per user.
 
-*Create QR code* makes a token named `ZbxView <date time>` for the user
-(listed under *User settings → API tokens*, where it can be disabled or
-deleted) and draws the code in the browser (bundled
-[qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator), MIT —
-nothing is loaded from the internet). On the phone itself, *Open in the app*
-does the same through the `zbxview://` link.
+## Configuration (admin, once)
 
-## Security
+Module `config` (manifest defaults, changeable with `module.update`; a key
+left empty in Zabbix falls back to manifest.json).
 
-- The code **is a credential**: whoever scans it signs in as you, with your
-  permissions. The page says so, shows the code only once, and *Hide* clears
-  it. Prefer a short validity; delete tokens of phones you no longer use.
-- Token creation goes through the regular API as the signed-in user, with
-  the frontend's CSRF protection.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `url` | *empty* = the browser's address | URL the **phone** reaches Zabbix at (relay / Cloudflare) |
+| `name` | *empty* = frontend server name | Server label in the app |
+| `self_signed` | `auto` | `auto`: pin the certificate when this server does not trust it; `1`: always pin; `0`: never |
+
+```json
+module.update {"moduleid": "<id>", "config": {"url": "https://zabbix.example.com", "name": "Production", "self_signed": "auto"}}
+```
+
+## Client certificate (mTLS) in the code
+
+For servers behind a gateway that requires a client certificate (e.g.
+Cloudflare mTLS), the module can hand one **shared** certificate to the app
+during pairing. Set it once as an admin:
+
+```bash
+php tools/set_client_cert.php https://zabbix.example.com <admin token file> client.p12 <password> zabbix.example.com
+php tools/set_client_cert.php https://zabbix.example.com <admin token file> --remove
+```
+
+The tool checks the certificate first and keeps the other config keys
+(`client_cert` = PEM with certificate and key, or base64 of a PKCS#12 bundle;
+`client_cert_password`; `client_cert_hosts` = comma-separated hosts it is sent
+to, empty = the server's host).
+
+- **EC keys only** (e.g. P-256). Certificate and key then make ~1.1 kB of
+  link; an RSA key does not fit and the page says so.
+- Such a link is too big for one readable QR code (125x125 modules failed
+  scan tests), so the page shows it as **3 codes in turn**, one per second,
+  each 77x77 modules (read 20/20 in noisy-camera tests at 425 px). The app
+  (0.49.0+) collects them in any order, shows "Scanned 1 of 3", reassembles
+  the link and saves the certificate like an imported one.
+- Without a configured certificate nothing changes: one plain code.
+
+Part format: `ZBXV1:<id>:<index>/<count>:<chunk>`; the chunks in index order
+are the `zbxview://add` link. Link parameters `cc` / `ck` = base64url (no
+padding) of the certificate DER / PKCS#8 key DER, `ch` = hosts.
 
 ## QR format
 
 ```
-zbxview://add?url=<https://host/path>&name=<label>&auth=token&token=<api token>&self_signed=0|1
+zbxview://add?url=<https://host/path>&name=<label>&auth=token&token=<api token>&self_signed=0|1[&pin=<sha256 hex>][&cc=..&ck=..&ch=..]
 ```
 
 URL-encoded (RFC 3986). `auth=password&user=<name>` is also understood by the
@@ -63,7 +94,8 @@ app (the user then types the password); a password is never put in a code.
 
 ## Development
 
-`tools/check_create.php <frontend url> <token file>` runs the token-creating
-controller against a live Zabbix (as the token's user), checks the link and
-deletes the token again. `tools/render_page.php [lang]` renders the page body
+`tools/check_create.php <frontend url> <token file> [config url]` runs the
+pairing flow against a live Zabbix (as the token's user): first pairing,
+reload, pair again; checks the links and the certificate pin, then deletes
+the tokens it made. `tools/render_page.php [lang]` renders the page body
 for a look outside a logged-in browser.

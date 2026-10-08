@@ -16,7 +16,7 @@ use Zabbix\Core\CModule;
  */
 class Module extends CModule {
 
-	public const VERSION = '1.0.1';
+	public const VERSION = '1.1.0';
 
 	public function init(): void {
 		// Only users who may create their own API tokens get the entry - the

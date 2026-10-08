@@ -1,4 +1,5 @@
 /* ZbxView connect - uses the theme's own colours (blue/dark/high-contrast). */
+/* .zvc-field/.zvc-check/.zvc-form: unused since 1.1.0 (no form), kept harmless. */
 .zvc {
 	display: flex;
 	flex-wrap: wrap;
@@ -27,7 +28,9 @@
 .zvc-check { display: flex; align-items: center; gap: 6px; margin: 4px 0 16px; }
 
 .zvc-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 4px; }
-.zvc-error { color: #e45959; }
+.zvc-error { flex-basis: 100%; opacity: .8; }
+.zvc-error:empty { display: none; }
+.zvc-error-on { color: #e45959; opacity: 1; font-weight: bold; }
 
 .zvc-qr {
 	width: 260px;
@@ -40,6 +43,12 @@
 }
 
 .zvc-qr svg { display: block; width: 100%; height: auto; }
+
+/* Rotating parts are denser codes: bigger, so phones read them from a monitor. */
+.zvc-qr.zvc-qr-multi { width: 440px; }
+.zvc-card:has(.zvc-qr-multi) { width: 520px; }
+.zvc-part { min-height: 1.4em; margin: -6px 0 12px; text-align: center; font-weight: bold; }
+.zvc-part:empty { display: none; }
 
 .zvc-facts {
 	display: grid;
