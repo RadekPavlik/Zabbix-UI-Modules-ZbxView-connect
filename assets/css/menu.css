@@ -1,5 +1,5 @@
 /* ZbxView connect - phone icon after the text of the module's menu entries
-   (User settings → Mobile connect, Administration → Mobile app).
+   (User settings → Mobile connect, Administration → Mobile configuration).
    Zabbix's icon font has no phone, so an SVG mask takes the link colour. */
 .menu-user a[href*="action=zbxview.connect"]::after,
 .menu-main a[href*="action=zbxview.connect.settings"]::after {

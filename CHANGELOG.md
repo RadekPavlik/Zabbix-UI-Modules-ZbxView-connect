@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.2 — 2026-10-08
+
+- Admin entry and page renamed to **Mobile configuration** (cs Konfigurace
+  telefonu, lv Tālruņa konfigurācija); phone icon after the text as in 1.3.1.
+
 ## 1.3.1 — 2026-10-08
 
 - The user page is now called **Mobile connect** (cs: Připojení telefonu,

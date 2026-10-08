@@ -16,10 +16,10 @@ use Zabbix\Core\CModule;
  */
 class Module extends CModule {
 
-	public const VERSION = '1.3.1';
+	public const VERSION = '1.3.2';
 
 	public function init(): void {
-		// Administration → Mobile app: module-wide settings and the client
+		// Administration → Mobile configuration: module-wide settings and the client
 		// certificate import, for super admins. (The phone icon after this
 		// entry and after "Mobile connect" comes from assets/css/menu.css.)
 		if (CWebUser::getType() == USER_TYPE_SUPER_ADMIN) {
@@ -27,7 +27,7 @@ class Module extends CModule {
 
 			if ($admin !== null) {
 				$admin->getSubMenu()->add(
-					(new CMenuItem(Lang::t('admin_menu', 'Mobile app')))
+					(new CMenuItem(Lang::t('admin_menu', 'Mobile configuration')))
 						->setAction('zbxview.connect.settings')
 				);
 			}

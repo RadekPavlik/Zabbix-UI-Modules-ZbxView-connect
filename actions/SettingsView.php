@@ -11,7 +11,7 @@ use Modules\ZbxViewConnect\Includes\Pairing;
 use Modules\ZbxViewConnect\Includes\Ui;
 
 /**
- * Administration → Mobile app (ZbxView connect): what the QR code carries
+ * Administration → Mobile configuration (ZbxView connect): what the QR code carries
  * (address, name, server certificate handling) and the shared client
  * certificate, imported and checked right here. A preview shows the codes
  * users will scan - with a placeholder token and key, never the real ones.
@@ -36,7 +36,7 @@ class SettingsView extends CController {
 		$cert = Pairing::clientCert();
 
 		$this->setResponse(new CControllerResponseData([
-			'title' => Lang::t('settings_title', 'ZbxView connect'),
+			'title' => Lang::t('settings_title', 'Mobile configuration'),
 			'theme' => Ui::themeClass(),
 			'url' => (string) ($config['url'] ?? ''),
 			'url_auto' => Pairing::frontendUrl(),

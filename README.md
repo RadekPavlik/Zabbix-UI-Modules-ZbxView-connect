@@ -58,7 +58,7 @@ module.update {"moduleid": "<id>", "config": {"url": "https://zabbix.example.com
 
 For servers behind a gateway that requires a client certificate (e.g.
 Cloudflare mTLS), the module can hand one **shared** certificate to the app
-during pairing. Set it once as a super admin in **Administration → Mobile app**: choose the .p12/.pfx or .pem file, its password and the
+during pairing. Set it once as a super admin in **Administration → Mobile configuration**: choose the .p12/.pfx or .pem file, its password and the
 hosts it is sent to, then *Check and save certificate*. The page refuses an
 unusable certificate (RSA key, wrong password, key not matching) and shows
 the stored one's file, key curve, CN, validity and hosts. The same page sets
