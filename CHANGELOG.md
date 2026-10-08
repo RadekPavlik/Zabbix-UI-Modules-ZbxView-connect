@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.4.0 — 2026-10-08
+
+- **Several phones per user.** *Mobile connect* lists the user's devices
+  (name, paired, last used), each with its own never-expiring token
+  ("ZbxView · <device>"). Per device: **New QR code** (new token first, then
+  the old one of that device only) and **Remove**. **Add another device**
+  (optional name, default "Phone") pairs one more even when one exists.
+  The first device is still paired as soon as the page opens. Tokens of 1.x
+  ("ZbxView <date>") show as "Phone (<date>)".
+- `tools/check_create.php` touches only devices it creates itself and checks
+  that the others (a real phone) stay as they are.
+
 ## 1.3.3 — 2026-10-08
 
 - "Discard changes" is a regular bordered button (it read as plain text).

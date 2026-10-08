@@ -16,37 +16,45 @@ $head = static fn(string $title, string $sub = '', $right = null) => (new CDiv([
 	$right
 ]))->addClass('zvc-card-head');
 
-$value = static fn(string $label, string $text, bool $mono = false) => (new CDiv([
-	(new CTag('label', true, $label))->addClass('zvc-label'),
-	(new CDiv($text))->addClass('zvc-value')->addClass($mono ? 'zvc-mono' : null)
-]))->addClass('zvc-field');
+// --- left: the user's devices ----------------------------------------------
+$rows = [];
 
-// --- left: this server + the pairing state --------------------------------
-$state = $data['paired']
-	? [
+foreach ($data['devices'] as $d) {
+	$rows[] = (new CDiv([
+		(new CDiv(Ui::icon('phone')))->addClass('zvc-dev-ico'),
 		(new CDiv([
-			(new CSpan(Lang::t('paired_since', 'Paired')))->addClass('zvc-k'),
-			(new CSpan($data['created']))->addClass('zvc-v'),
-			(new CSpan(Lang::t('last_used', 'Last used by the app')))->addClass('zvc-k'),
-			(new CSpan($data['lastaccess']))->addClass('zvc-v')
-		]))->addClass('zvc-facts'),
-		(new CDiv([
-			(new CButton('zvc-repair', [Ui::icon('refresh'), Lang::t('repair', 'Pair again')]))
-				->setId('zvc-repair')->addClass('zvc-btn'),
-			(new CSpan(Lang::t('repair_note',
-				'A new code replaces the token - the phone connected now stops working.')))->addClass('zvc-note')
-		]))->addClass('zvc-actions')->addStyle('margin-top: 18px;')
-	]
-	: (new CDiv(Lang::t('first_note', 'The code is created as soon as you open this page.')))
-		->addClass('zvc-note')->addStyle('margin-top: 4px;');
+			(new CDiv($d['name']))->addClass('zvc-dev-name'),
+			(new CDiv(Lang::t('paired_since', 'Paired').' '.$d['created_text']))->addClass('zvc-dev-meta'),
+			(new CDiv(Lang::t('last_used_short', 'Last used').' '.$d['lastaccess_text']))->addClass('zvc-dev-meta')
+		]))->addClass('zvc-grow'),
+		(new CSimpleButton([Ui::icon('refresh'), Lang::t('new_code', 'New QR code')]))
+			->addClass('zvc-btn')->addClass('zvc-btn-alt')->addClass('zvc-btn-sm')->addClass('js-repair')
+			->setAttribute('data-tokenid', $d['tokenid'])->setAttribute('data-name', $d['name']),
+		(new CSimpleButton(Ui::icon('trash')))
+			->addClass('zvc-btn')->addClass('zvc-btn-alt')->addClass('zvc-btn-sm')->addClass('zvc-btn-icon')
+			->addClass('js-remove')->setAttribute('title', Lang::t('remove_device', 'Remove device'))
+			->setAttribute('data-tokenid', $d['tokenid'])->setAttribute('data-name', $d['name'])
+	]))->addClass('zvc-dev')->setAttribute('data-tokenid', $d['tokenid']);
+}
 
 $left = (new CDiv([
-	$head(Lang::t('form_title', 'Add this server to the app'),
-		Lang::t('form_intro', 'Scan the code in ZbxView - the server and your sign-in are added at once.')),
+	$head(Lang::t('devices_title', 'Your devices'),
+		Lang::t('devices_intro', 'Each phone has its own sign-in. A new code or removing one device does not affect the others.')),
 	(new CDiv([
-		$value(Lang::t('name', 'Name in the app'), $data['server_name']),
-		$value(Lang::t('url', 'Server address'), $data['server_url'], true),
-		$state
+		(new CDiv([
+			Lang::t('server', 'Server').': ', new CTag('b', true, $data['server_name']), ' · ',
+			(new CSpan($data['server_url']))->addClass('zvc-mono')
+		]))->addClass('zvc-server-line'),
+		$rows
+			? (new CDiv($rows))->addClass('zvc-devices')
+			: (new CDiv(Lang::t('first_note', 'The code is created as soon as you open this page.')))->addClass('zvc-none'),
+		(new CDiv([
+			(new CTag('input', false))->setAttribute('type', 'text')->setId('zvc-device-name')->addClass('zvc-input')
+				->setAttribute('maxlength', 48)
+				->setAttribute('placeholder', Lang::t('device_placeholder', 'Device name, e.g. Work phone')),
+			(new CSimpleButton([Ui::icon('plus'), Lang::t('add_device', 'Add another device')]))
+				->setId('zvc-add')->addClass('zvc-btn')
+		]))->addClass('zvc-add')
 	]))->addClass('zvc-card-body')
 ]))->addClass('zvc-card');
 
@@ -59,6 +67,7 @@ $result = (new CDiv([
 			(new CDiv())->setId('zvc-part')->addClass('zvc-part')
 		]))->addClass('zvc-qr-col'),
 		(new CDiv([
+			(new CDiv([new CTag('small', true, Lang::t('device', 'Device')), (new CTag('b', true, ''))->setId('zvc-device')])),
 			(new CDiv([new CTag('small', true, Lang::t('server', 'Server')), new CTag('b', true, $data['server_name'])])),
 			(new CDiv([new CTag('small', true, Lang::t('token', 'Token')), (new CTag('b', true, ''))->setId('zvc-token-name')->addClass('zvc-mono')])),
 			(new CDiv([new CTag('small', true, Lang::t('expires', 'Expires')), new CTag('b', true, Lang::t('never', 'Never'))]))
@@ -76,9 +85,9 @@ $result = (new CDiv([
 ]))->setId('zvc-result')->addClass('zvc-hidden');
 
 $empty = (new CDiv([
-	(new CDiv([Ui::icon('qr'), new CDiv(Lang::t('empty_code', 'The code appears here when you pair'))]))->addClass('zvc-empty'),
+	(new CDiv([Ui::icon('qr'), new CDiv(Lang::t('empty_code', 'The code appears here when you pair a device'))]))->addClass('zvc-empty'),
 	(new CDiv([
-		new CDiv([(new CDiv('1'))->addClass('zvc-step'), Lang::t('step1', 'Open this page or tap Pair again')]),
+		new CDiv([(new CDiv('1'))->addClass('zvc-step'), Lang::t('step1', 'Add a device or tap New QR code')]),
 		new CDiv([(new CDiv('2'))->addClass('zvc-step'), Lang::t('step2', 'In ZbxView tap Add server')]),
 		new CDiv([(new CDiv('3'))->addClass('zvc-step'), Lang::t('step3', 'Tap Scan QR code and point the phone here')])
 	]))->addClass('zvc-steps')
@@ -107,14 +116,17 @@ $right = (new CDiv([
 			->addClass('zvc')
 			->addClass($data['theme'])
 			->setAttribute('data-csrf', $data['csrf'])
-			->setAttribute('data-paired', $data['paired'] ? '1' : '0')
+			->setAttribute('data-paired', $data['devices'] ? '1' : '0')
 			->setAttribute('data-api', $data['api_access'] ? '1' : '0')
-			->setAttribute('data-confirm', Lang::t('repair_confirm',
-				'Pair again? The phone connected now will stop working.'))
-			->setAttribute('data-wait', Lang::t('wait', 'Creating the code…'))
-			->setAttribute('data-copied', Lang::t('copied', 'Copied'))
-			->setAttribute('data-hides', Lang::t('hides_in', 'Hides in'))
-			->setAttribute('data-part-label', Lang::t('part_label',
-				'Code {i} of {n} - keep the phone on it until the app has read all of them'))
+			->setAttribute('data-t', json_encode([
+				'repair' => Lang::t('repair_confirm_device',
+					'New code for "{name}"? That phone stops working until it scans the new code; other devices are not affected.'),
+				'remove' => Lang::t('remove_confirm',
+					'Remove "{name}"? That phone loses access; other devices are not affected.'),
+				'wait' => Lang::t('wait', 'Creating the code…'),
+				'copied' => Lang::t('copied', 'Copied'),
+				'hides' => Lang::t('hides_in', 'Hides in'),
+				'part' => Lang::t('part_label', 'Code {i} of {n} - keep the phone on it until the app has read all of them')
+			]))
 	)
 	->show();

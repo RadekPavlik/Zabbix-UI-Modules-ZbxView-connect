@@ -248,3 +248,25 @@
 
 .zvc-hidden { display: none !important; }
 .zvc-footer { display: flex; align-items: center; gap: 18px; margin-top: 24px; flex-wrap: wrap; }
+
+/* ---------------------------------------------------------------- devices */
+.zvc-server-line { color: var(--zvc-muted); margin-bottom: 16px; overflow-wrap: anywhere; }
+.zvc-server-line b { color: var(--zvc-text); font-weight: 600; }
+.zvc-devices { display: flex; flex-direction: column; gap: 10px; }
+.zvc-dev {
+	display: flex; align-items: center; gap: 14px; padding: 12px 14px;
+	border: 1px solid var(--zvc-border); border-radius: 8px; background: var(--zvc-card-2);
+}
+.zvc-dev.is-current { border-color: var(--zvc-accent); background: var(--zvc-accent-soft); }
+.zvc-dev-ico { flex: none; width: 36px; height: 36px; border-radius: 8px; display: grid; place-items: center;
+	background: var(--zvc-card); border: 1px solid var(--zvc-border); color: var(--zvc-accent); }
+.zvc-dev-ico svg { width: 18px; height: 18px; }
+.zvc-dev .zvc-grow { flex: 1; min-width: 0; }
+.zvc-dev-name { font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
+.zvc-dev-meta { color: var(--zvc-muted); font-size: 12px; margin-top: 2px; line-height: 1.35; }
+.zvc-dev-meta + .zvc-dev-meta { margin-top: 0; }
+.zvc .zvc-btn-sm { height: 32px; padding: 0 12px; font-size: 13px; }
+.zvc .zvc-btn-icon { width: 32px; padding: 0; }
+.zvc-none { padding: 14px; border: 1px dashed var(--zvc-border); border-radius: 8px; color: var(--zvc-muted); text-align: center; }
+.zvc-add { display: flex; gap: 10px; margin-top: 16px; }
+.zvc-add .zvc-input { flex: 1; min-width: 0; }

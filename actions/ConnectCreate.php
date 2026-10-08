@@ -11,14 +11,19 @@ use Modules\ZbxViewConnect\Includes\Lang;
 use Modules\ZbxViewConnect\Includes\Pairing;
 
 /**
- * Pairs the app: creates a never-expiring API token for the signed-in user
- * and returns the zbxview://add link the QR code carries.
+ * Pairs devices: every phone has its own never-expiring API token
+ * ("ZbxView · <device>"); the zbxview://add link of a new token is returned
+ * for the QR code.
  *
- * - repair=0 (first pairing): refused when the user is already paired, so a
- *   reload or a second tab never creates tokens behind the user's back.
- * - repair=1 ("Pair again"): the new token is created first, then the user's
- *   older ZbxView tokens are deleted - the previously paired phone loses
- *   access, the new one has it. Nothing is deleted if creation fails.
+ * mode=first   the first device, made when the page opens - refused when the
+ *              user already has one, so a reload or a second tab never adds
+ *              tokens behind the user's back.
+ * mode=add     another device, named by the user (`device`).
+ * mode=repair  a new code for one device (`tokenid`): its new token is made
+ *              first, then the old one deleted and the new one takes the
+ *              device's name - that phone has to scan again, the others are
+ *              untouched. Nothing is deleted if creation fails.
+ * mode=remove  forgets one device (`tokenid`): its token is deleted.
  */
 class ConnectCreate extends CController {
 
@@ -28,7 +33,11 @@ class ConnectCreate extends CController {
 	}
 
 	protected function checkInput(): bool {
-		$ret = $this->validateInput(['repair' => 'in 0,1']);
+		$ret = $this->validateInput([
+			'mode' => 'required|in first,add,repair,remove',
+			'device' => 'string',
+			'tokenid' => 'id'
+		]);
 
 		if (!$ret) {
 			$this->respond(['error' => Lang::t('err_create', 'The API token could not be created.')]);
@@ -43,9 +52,33 @@ class ConnectCreate extends CController {
 
 	protected function doAction(): void {
 		$userid = (string) CWebUser::$data['userid'];
-		$repair = (int) $this->getInput('repair', 0) === 1;
+		$mode = (string) $this->getInput('mode');
+		$devices = Pairing::devices($userid, Lang::t('device_default', 'Phone'));
+		$device = null;
 
-		if (!$repair && Pairing::active($userid) !== null) {
+		if ($mode === 'repair' || $mode === 'remove') {
+			// Only the user's own ZbxView tokens.
+			foreach ($devices as $d) {
+				if ($d['tokenid'] === (string) $this->getInput('tokenid', '')) {
+					$device = $d;
+				}
+			}
+
+			if ($device === null) {
+				$this->respond(['error' => Lang::t('err_device', 'This device is no longer paired.')]);
+
+				return;
+			}
+		}
+
+		if ($mode === 'remove') {
+			API::Token()->delete([$device['tokenid']]);
+			$this->respond(['removed' => true]);
+
+			return;
+		}
+
+		if ($mode === 'first' && $devices) {
 			$this->respond(['paired' => true]);
 
 			return;
@@ -61,10 +94,16 @@ class ConnectCreate extends CController {
 			return;
 		}
 
-		$old = array_column(Pairing::tokens($userid), 'tokenid');
+		$device_name = $mode === 'repair'
+			? $device['name']
+			: trim((string) $this->getInput('device', ''));
 
-		$now = time();
-		$token_name = Pairing::TOKEN_PREFIX.date('Y-m-d H:i:s', $now);
+		if ($device_name === '') {
+			$device_name = Lang::t('device_default', 'Phone');
+		}
+
+		// A repaired device gets a temporary name until its old token is gone.
+		$token_name = Pairing::tokenName($userid, $mode === 'repair' ? $device_name.' ~' : $device_name);
 
 		$result = API::Token()->create([
 			'name' => $token_name,
@@ -82,23 +121,24 @@ class ConnectCreate extends CController {
 			return;
 		}
 
-		[['token' => $token]] = API::Token()->generate($result['tokenids']);
+		$tokenid = $result['tokenids'][0];
+		[['token' => $token]] = API::Token()->generate([$tokenid]);
 
-		// Only now that the new token exists: one phone, one token.
-		if ($old) {
-			API::Token()->delete($old);
+		if ($mode === 'repair') {
+			// Only now that the new token exists: the old one of THIS device goes.
+			API::Token()->delete([$device['tokenid']]);
+			$token_name = Pairing::tokenName($userid, $device_name);
+			API::Token()->update(['tokenid' => $tokenid, 'name' => $token_name]);
 		}
 
-		$server = Pairing::server();
-
-		$link = Pairing::link($server, $token, $client_cert);
+		$link = Pairing::link(Pairing::server(), $token, $client_cert);
 
 		$this->respond([
 			'link' => $link,
 			// Several codes shown in turn when the link is too big for one.
 			'parts' => Pairing::split($link),
 			'token_name' => $token_name,
-			'replaced' => count($old),
+			'device' => $device_name,
 			'tail' => substr($token, -4)
 		]);
 	}

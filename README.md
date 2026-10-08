@@ -30,13 +30,14 @@ module.create  {"id": "zbxviewconnect", "relative_path": "modules/Zabbix-UI-Modu
 
 ## What the page does
 
-- **First open**: the QR code appears immediately - no questions. In the app:
-  *Add server → Scan QR code*.
-- **Later**: the page shows when the app was paired and last used, and a
-  **Pair again** button (new phone, reinstalled app, lost phone). Pairing
-  again replaces the token: the previous phone stops working.
-- The token (`ZbxView <date time>`, under *User settings → API tokens*) never
-  expires. One per user.
+- **First open**: the QR code for the first device appears right away - no
+  questions. In the app: *Add server → Scan QR code*.
+- **Your devices**: every phone has its own token (`ZbxView · <device>`,
+  never expires, listed under *User settings → API tokens*). Per device:
+  **New QR code** (that phone scans again, others are not affected) and
+  **Remove** (that phone loses access). **Add another device** pairs one more
+  phone or tablet, with an optional name.
+- The code hides itself after 5 minutes (or with *Hide now*).
 
 ## Configuration (admin, once)
 

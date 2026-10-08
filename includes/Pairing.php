@@ -35,6 +35,52 @@ class Pairing {
 		return $tokens;
 	}
 
+	/** Token names of a device: "ZbxView · <device>"; 1.x used "ZbxView <date>". */
+	public const DEVICE_SEPARATOR = '· ';
+
+	/**
+	 * The user's paired devices (one ZbxView token each), newest first:
+	 * tokenid, name (device), created, lastaccess (unix), active.
+	 */
+	public static function devices(string $userid, string $legacy_label = 'Phone'): array {
+		$devices = [];
+
+		foreach (self::tokens($userid) as $token) {
+			$rest = substr((string) $token['name'], strlen(self::TOKEN_PREFIX));
+			$name = strpos($rest, self::DEVICE_SEPARATOR) === 0
+				? substr($rest, strlen(self::DEVICE_SEPARATOR))
+				: $legacy_label.' ('.substr($rest, 0, 10).')';
+
+			$devices[] = [
+				'tokenid' => (string) $token['tokenid'],
+				'name' => $name,
+				'created' => (int) $token['created_at'],
+				'lastaccess' => (int) $token['lastaccess'],
+				'active' => (int) $token['status'] === ZBX_AUTH_TOKEN_ENABLED
+					&& ((int) $token['expires_at'] === 0 || (int) $token['expires_at'] > time())
+			];
+		}
+
+		return $devices;
+	}
+
+	/**
+	 * A token name for $device that no token of the user has yet.
+	 */
+	public static function tokenName(string $userid, string $device): string {
+		$device = trim(preg_replace('/\s+/', ' ', $device));
+		$taken = array_column(self::tokens($userid), 'name');
+		// Zabbix token names are at most 64 characters.
+		$base = self::TOKEN_PREFIX.self::DEVICE_SEPARATOR.mb_substr($device, 0, 48);
+		$name = $base;
+
+		for ($i = 2; in_array($name, $taken, true); $i++) {
+			$name = $base.' ('.$i.')';
+		}
+
+		return $name;
+	}
+
 	/**
 	 * The token the app is (most likely) using: newest enabled, unexpired one.
 	 */

@@ -12,9 +12,9 @@ use Modules\ZbxViewConnect\Includes\Pairing;
 use Modules\ZbxViewConnect\Includes\Ui;
 
 /**
- * The "Mobile connect" page. Not paired yet: connect.js asks
- * ConnectCreate for a code right away. Paired: the page shows since when and
- * offers "Pair again", which replaces the token.
+ * The "Mobile connect" page: the user's paired devices (each with its own
+ * token) - new code or remove per device, "Add another device". With no
+ * device yet, connect.js pairs the first one right away.
  */
 class ConnectView extends CController {
 
@@ -31,8 +31,17 @@ class ConnectView extends CController {
 	}
 
 	protected function doAction(): void {
-		$active = Pairing::active((string) CWebUser::$data['userid']);
 		$server = Pairing::server(false);
+		$devices = [];
+
+		foreach (Pairing::devices((string) CWebUser::$data['userid'], Lang::t('device_default', 'Phone')) as $d) {
+			$devices[] = $d + [
+				'created_text' => zbx_date2str(DATE_TIME_FORMAT, $d['created']),
+				'lastaccess_text' => $d['lastaccess'] > 0
+					? zbx_date2str(DATE_TIME_FORMAT, $d['lastaccess'])
+					: Lang::t('never_used', 'not yet')
+			];
+		}
 
 		$this->setResponse(new CControllerResponseData([
 			'title' => Lang::t('title', 'Mobile connect'),
@@ -42,12 +51,7 @@ class ConnectView extends CController {
 			'server_name' => $server['name'],
 			// A token is useless to the app when the role may not use the API.
 			'api_access' => CWebUser::checkAccess('api.access'),
-			'paired' => $active !== null,
-			'token_name' => $active !== null ? (string) $active['name'] : '',
-			'created' => $active !== null ? zbx_date2str(DATE_TIME_FORMAT, (int) $active['created_at']) : '',
-			'lastaccess' => $active !== null && (int) $active['lastaccess'] > 0
-				? zbx_date2str(DATE_TIME_FORMAT, (int) $active['lastaccess'])
-				: Lang::t('never_used', 'not yet'),
+			'devices' => $devices,
 			'csrf' => CCsrfTokenHelper::get('zbxview.connect.create')
 		]));
 	}

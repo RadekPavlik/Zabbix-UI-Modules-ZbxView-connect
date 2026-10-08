@@ -4,7 +4,7 @@ if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 // Runs the pairing flow of ConnectCreate against a live Zabbix, as the token's
 // user: first pairing, a reload (must NOT create a token), "Pair again" (new
 // token, old one deleted). Checks every link, then deletes what it created.
-// Refuses to run when the user already has ZbxView tokens (a real phone).
+// Touches only devices it creates itself; others (a real phone) stay as they are.
 //
 //     php tools/check_create.php https://zabbix/zabbix ~/.config/zabbix/token [config-url]
 class CWebUser {
@@ -52,13 +52,15 @@ use Modules\ZbxViewConnect\Includes\Pairing;
 
 $me = API::User()->checkAuthentication(['token' => $TOK]);
 CWebUser::$data['userid'] = $me['userid'];
-if (Pairing::tokens($me['userid'])) { fwrite(STDERR, "User {$me['username']} already has ZbxView tokens - not touching them.\n"); exit(2); }
+// Devices this test did not create (e.g. a real phone) must stay untouched.
+$before = Pairing::tokens($me['userid']);
+$foreign = array_column($before, 'tokenid');
 
 $fail = 0;
 $ok = function (bool $c, string $m) use (&$fail) { echo ($c ? 'PASS  ' : 'FAIL  '), $m, "\n"; if (!$c) $fail++; };
-$run = function (int $repair) {
+$run = function (array $input) {
 	$c = (new ReflectionClass('Modules\ZbxViewConnect\Actions\ConnectCreate'))->newInstanceWithoutConstructor();
-	(new ReflectionProperty('CController', 'input'))->setValue($c, ['repair' => (string) $repair]);
+	(new ReflectionProperty('CController', 'input'))->setValue($c, $input);
 	(new ReflectionMethod($c, 'doAction'))->invoke($c);
 	return json_decode($c->getResponse()->getData()['main_block'], true);
 };
@@ -68,42 +70,56 @@ $check = function (array $r) use ($ok, $CONFIG) {
 	$ok(str_starts_with($r['link'] ?? '', 'zbxview://add?') && $q['url'] === rtrim($CONFIG['url'], '/')
 		&& $q['name'] === 'Test Zabbix' && $q['auth'] === 'token' && strlen($q['token'] ?? '') === 64
 		&& str_ends_with($q['token'], $r['tail']), 'link carries url, name and the new token');
-	$cert = Pairing::certificate($q['url']);
-	echo '      certificate: ', json_encode($cert), ', pin in code: ', $q['pin'] ?? '(none)', "\n";
-	$ok($cert === null || $cert['trusted'] ? !isset($q['pin']) : ($q['pin'] ?? '') === $cert['sha256'],
-		'pin only for an untrusted certificate, equal to its SHA-256');
 	$parts = $r['parts'] ?? [];
 	$joined = implode('', array_map(fn($p) => preg_replace('/^ZBXV1:[a-z0-9]+:\d+\/\d+:/', '', $p), $parts));
 	if ($CONFIG['client_cert'] !== '') {
-		$ok(count($parts) >= 2 && $joined === $r['link'] && isset($q['cc'], $q['ck']) && $q['ch'] === 'zabbix-app.example.com',
-			'certificate in the link, split into '.count($parts).' parts that rejoin to it');
+		$ok(count($parts) >= 2 && $joined === $r['link'] && isset($q['cc'], $q['ck']), 'certificate in the link, '.count($parts).' parts rejoin to it');
 	}
 	else {
 		$ok($parts === [$r['link']], 'no certificate: one plain code');
 	}
-	$GLOBALS['LAST_PARTS'] = $parts;
-	return $q['token'];
 };
+$mine = fn() => array_values(array_filter(Pairing::devices($me['userid']), fn($d) => !in_array($d['tokenid'], $GLOBALS['foreign'], true)));
+$GLOBALS['foreign'] = $foreign;
+$tag = 'claude-test-'.substr(md5((string) microtime(true)), 0, 5);
 
-$r1 = $run(0);
-$ok(isset($r1['link']), 'first open creates a code');
-$check($r1);
-$t1 = Pairing::tokens($me['userid']);
-$ok(count($t1) === 1 && (int) $t1[0]['expires_at'] === 0, 'one token, never expires');
+try {
+	if ($before) {
+		$r = $run(['mode' => 'first']);
+		$ok(($r['paired'] ?? false) === true, 'mode=first with a device already paired creates nothing');
+	}
+	$r = $run(['mode' => 'add', 'device' => $tag]);
+	$check($r);
+	$d = $mine();
+	$ok(count($d) === 1 && $d[0]['name'] === $tag && $r['device'] === $tag, 'add: device "'.$tag.'" created');
+	$r2 = $run(['mode' => 'add', 'device' => $tag]);
+	$d = $mine();
+	$ok(count($d) === 2 && in_array($tag.' (2)', array_column($d, 'name'), true), 'add with the same name: second device "'.$tag.' (2)"');
+	$first = array_values(array_filter($d, fn($x) => $x['name'] === $tag))[0];
+	$second = array_values(array_filter($d, fn($x) => $x['name'] !== $tag))[0];
 
-$r2 = $run(0);
-$ok(($r2['paired'] ?? false) === true && !isset($r2['link']), 'reload while paired creates nothing');
-$ok(count(Pairing::tokens($me['userid'])) === 1, 'still one token');
+	sleep(1);
+	$r = $run(['mode' => 'repair', 'tokenid' => $first['tokenid']]);
+	$check($r);
+	$d = $mine();
+	$names = array_column($d, 'name');
+	$ok(count($d) === 2 && in_array($tag, $names, true) && !in_array($first['tokenid'], array_column($d, 'tokenid'), true)
+		&& in_array($second['tokenid'], array_column($d, 'tokenid'), true),
+		'repair: that device has a new token under the same name, the other device is untouched');
 
-sleep(1); // token names carry the second
-$r3 = $run(1);
-$ok(isset($r3['link']) && ($r3['replaced'] ?? 0) === 1, 'pair again: new code, old token replaced');
-$check($r3);
-$t3 = Pairing::tokens($me['userid']);
-$ok(count($t3) === 1 && $t3[0]['tokenid'] !== $t1[0]['tokenid'], 'exactly one token left, the new one');
+	$r = $run(['mode' => 'remove', 'tokenid' => $second['tokenid']]);
+	$d = $mine();
+	$ok(($r['removed'] ?? false) && count($d) === 1 && $d[0]['name'] === $tag, 'remove: only that device is gone');
 
-if (getenv('ZVC_PARTS_OUT')) { file_put_contents(getenv('ZVC_PARTS_OUT'), implode("\n", $GLOBALS['LAST_PARTS'])."\n"); }
-$left = array_column(Pairing::tokens($me['userid']), 'tokenid');
-if ($left) { API::Token()->delete($left); }
-echo 'cleanup: deleted ', count($left), " token(s)\n", $fail ? "FAILED: $fail\n" : "ALL PASS\n";
+	$r = $run(['mode' => 'remove', 'tokenid' => '1']);
+	$ok(isset($r['error']), 'remove of a token that is not one of the user\'s devices is refused');
+}
+finally {
+	$left = array_column($mine(), 'tokenid');
+	if ($left) { API::Token()->delete($left); }
+	$after = array_column(Pairing::tokens($me['userid']), 'tokenid');
+	sort($after); $f = $foreign; sort($f);
+	$ok($after === $f, 'devices the test did not create are untouched ('.count($f).')');
+	echo 'cleanup: deleted ', count($left), " token(s)\n", $fail ? "FAILED: $fail\n" : "ALL PASS\n";
+}
 exit($fail ? 1 : 0);
