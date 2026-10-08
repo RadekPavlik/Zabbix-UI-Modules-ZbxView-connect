@@ -16,18 +16,18 @@ use Zabbix\Core\CModule;
  */
 class Module extends CModule {
 
-	public const VERSION = '1.2.0';
+	public const VERSION = '1.3.0';
 
 	public function init(): void {
-		// Administration → General → ZbxView connect: module-wide settings and
-		// the client certificate import, for super admins.
+		// Administration → Mobile app: module-wide settings and the client
+		// certificate import, for super admins. (The phone icon in front of
+		// it and of "Connect application" comes from assets/css/menu.css.)
 		if (CWebUser::getType() == USER_TYPE_SUPER_ADMIN) {
 			$admin = APP::Component()->get('menu.main')->find(_('Administration'));
-			$general = $admin !== null ? $admin->getSubMenu()->find(_('General')) : null;
 
-			if ($general !== null) {
-				$general->getSubMenu()->add(
-					(new CMenuItem(Lang::t('settings_title', 'ZbxView connect')))
+			if ($admin !== null) {
+				$admin->getSubMenu()->add(
+					(new CMenuItem(Lang::t('admin_menu', 'Mobile app')))
 						->setAction('zbxview.connect.settings')
 				);
 			}
@@ -58,6 +58,7 @@ class Module extends CModule {
 		$action = APP::Component()->router->getAction();
 
 		if ($action === 'zbxview.connect.settings') {
+			$assets['js'][] = 'qrcode.js?v='.self::VERSION;
 			$assets['js'][] = 'settings.js?v='.self::VERSION;
 			$assets['css'][] = 'connect.css?v='.self::VERSION;
 		}

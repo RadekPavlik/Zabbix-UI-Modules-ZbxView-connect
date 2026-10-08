@@ -10,15 +10,16 @@ use Modules\ZbxViewConnect\Includes\Lang;
 use Modules\ZbxViewConnect\Includes\Pairing;
 
 /**
- * Saves the ZbxView connect configuration (JSON POST from settings.js).
+ * The admin page's actions (JSON POST from settings.js):
  *
- * - settings: url, name, self_signed - validated, then stored.
- * - certificate: cert (base64 of the uploaded file: PKCS#12 or PEM),
- *   password, hosts. Checked with the same code the pairing page uses
- *   (EC key, key matches certificate, password right) and stored only when
- *   usable; the response describes it (CN, validity, hosts).
- * - remove_cert=1: forgets the certificate.
- * Other config keys are kept.
+ * - action=check: checks an uploaded certificate (base64 of the file,
+ *   password, hosts) without storing anything; answers its description and
+ *   the preview data.
+ * - action=save: stores everything at once - url, name, server_cert (0/1),
+ *   cert_required (0/1) and, when a new file was chosen, the certificate
+ *   (cert, cert_name, password) plus its hosts. A certificate is stored only
+ *   when usable (EC key, key matches, password right); cert_required=0
+ *   forgets it. Other config keys are kept.
  */
 class SettingsUpdate extends CController {
 
@@ -28,11 +29,13 @@ class SettingsUpdate extends CController {
 
 	protected function checkInput(): bool {
 		$ret = $this->validateInput([
-			'section' => 'required|in settings,certificate,remove_cert',
+			'action' => 'required|in check,save',
 			'url' => 'string',
 			'name' => 'string',
-			'self_signed' => 'in auto,0,1',
+			'server_cert' => 'in 0,1',
+			'cert_required' => 'in 0,1',
 			'cert' => 'string',
+			'cert_name' => 'string',
 			'password' => 'string',
 			'hosts' => 'string'
 		]);
@@ -58,62 +61,69 @@ class SettingsUpdate extends CController {
 		}
 
 		$config = $module->getConfig();
+		$hosts = self::hosts((string) $this->getInput('hosts', ''));
+		$upload = $this->upload();
 
-		switch ($this->getInput('section')) {
-			case 'settings':
-				$url = rtrim(trim((string) $this->getInput('url', '')), '/');
+		if (isset($upload['error'])) {
+			$this->respond($upload);
 
-				if ($url !== '') {
-					$parts = parse_url($url);
+			return;
+		}
 
-					if (!is_array($parts) || !in_array(strtolower($parts['scheme'] ?? ''), ['http', 'https'], true)
-							|| ($parts['host'] ?? '') === '') {
-						$this->respond(['error' => Lang::t('err_url', 'Enter the address as https://host/path.')]);
+		if ($this->getInput('action') === 'check') {
+			if ($upload === null) {
+				$this->respond(['error' => Lang::t('s_cc_no_file', 'Choose the certificate file first.')]);
 
-						return;
-					}
-				}
+				return;
+			}
 
-				$config['url'] = $url;
-				$config['name'] = trim((string) $this->getInput('name', ''));
-				$config['self_signed'] = (string) $this->getInput('self_signed', 'auto');
-				break;
+			$this->respondCert($upload['check'], $upload['name'], (string) ($config['url'] ?? ''));
 
-			case 'certificate':
-				$raw = trim((string) $this->getInput('cert', ''));
-				$bin = base64_decode($raw, true);
+			return;
+		}
 
-				if ($raw === '' || $bin === false) {
-					$this->respond(['error' => Lang::t('err_cert_invalid',
-						'The client certificate cannot be read.')]);
+		// --- save ---------------------------------------------------------
+		$url = rtrim(trim((string) $this->getInput('url', '')), '/');
 
-					return;
-				}
+		if ($url !== '') {
+			$parts = parse_url($url);
 
-				// PEM stays text (readable in the config); PKCS#12 stays base64.
-				$value = strpos($bin, '-----BEGIN') !== false ? $bin : $raw;
-				$password = (string) $this->getInput('password', '');
-				$hosts = trim((string) $this->getInput('hosts', ''));
-				$check = Pairing::clientCertFrom($value, $password, $hosts);
+			if (!is_array($parts) || !in_array(strtolower($parts['scheme'] ?? ''), ['http', 'https'], true)
+					|| ($parts['host'] ?? '') === '') {
+				$this->respond(['error' => Lang::t('err_url', 'Enter the address as https://host/path.')]);
 
-				if ($check === [] || isset($check['error'])) {
-					$code = $check['error'] ?? 'invalid';
-					$this->respond(['error' => Lang::t('err_cert_'.$code,
-						'The client certificate cannot be used.')]);
+				return;
+			}
+		}
 
-					return;
-				}
+		$config['url'] = $url;
+		$config['name'] = trim((string) $this->getInput('name', ''));
+		$config['self_signed'] = (string) $this->getInput('server_cert', '0');
 
-				$config['client_cert'] = $value;
-				$config['client_cert_password'] = $password;
-				$config['client_cert_hosts'] = $hosts;
-				break;
+		if ((string) $this->getInput('cert_required', '0') === '0') {
+			$config['client_cert'] = $config['client_cert_password'] = $config['client_cert_hosts'] = '';
+			$config['client_cert_name'] = '';
+		}
+		elseif ($upload !== null) {
+			$config['client_cert'] = $upload['value'];
+			$config['client_cert_password'] = $upload['password'];
+			$config['client_cert_name'] = $upload['name'];
+			$config['client_cert_hosts'] = $hosts;
+		}
+		else {
+			// No new file: the stored one must exist and still be usable.
+			$check = Pairing::clientCertFrom((string) ($config['client_cert'] ?? ''),
+				(string) ($config['client_cert_password'] ?? ''), $hosts);
 
-			case 'remove_cert':
-				$config['client_cert'] = '';
-				$config['client_cert_password'] = '';
-				$config['client_cert_hosts'] = '';
-				break;
+			if ($check === [] || isset($check['error'])) {
+				$this->respond(['error' => $check === []
+					? Lang::t('s_cc_no_file', 'Choose the certificate file first.')
+					: Lang::t('err_cert_'.$check['error'], 'The client certificate cannot be used.')]);
+
+				return;
+			}
+
+			$config['client_cert_hosts'] = $hosts;
 		}
 
 		$module->setConfig($config);
@@ -126,11 +136,54 @@ class SettingsUpdate extends CController {
 			return;
 		}
 
-		$this->respond(['ok' => true, 'cert' => Pairing::describe(Pairing::clientCertFrom(
-			(string) ($config['client_cert'] ?? ''),
-			(string) ($config['client_cert_password'] ?? ''),
-			(string) ($config['client_cert_hosts'] ?? '')
-		), $config['url'] ?? '')]);
+		$this->respondCert(Pairing::clientCertFrom((string) ($config['client_cert'] ?? ''),
+			(string) ($config['client_cert_password'] ?? ''), (string) ($config['client_cert_hosts'] ?? '')),
+			(string) ($config['client_cert_name'] ?? ''), $url);
+	}
+
+	/**
+	 * The uploaded certificate, checked: null when no file was sent,
+	 * ['error' => ...] when unusable.
+	 */
+	private function upload(): ?array {
+		$raw = trim((string) $this->getInput('cert', ''));
+
+		if ($raw === '') {
+			return null;
+		}
+
+		$bin = base64_decode($raw, true);
+
+		if ($bin === false) {
+			return ['error' => Lang::t('err_cert_invalid', 'The client certificate cannot be read.')];
+		}
+
+		// PEM stays text (readable in the config); PKCS#12 stays base64.
+		$value = strpos($bin, '-----BEGIN') !== false ? $bin : $raw;
+		$password = (string) $this->getInput('password', '');
+		$check = Pairing::clientCertFrom($value, $password, self::hosts((string) $this->getInput('hosts', '')));
+
+		if ($check === [] || isset($check['error'])) {
+			return ['error' => Lang::t('err_cert_'.($check['error'] ?? 'invalid'), 'The client certificate cannot be used.')];
+		}
+
+		$name = basename(str_replace('\\', '/', trim((string) $this->getInput('cert_name', ''))));
+
+		return ['value' => $value, 'password' => $password, 'name' => $name, 'check' => $check];
+	}
+
+	private static function hosts(string $raw): string {
+		return implode(',', array_values(array_unique(array_filter(array_map(
+			static fn($h) => strtolower(trim((string) $h)), preg_split('/[,;\s]+/', $raw)
+		), static fn($h) => $h !== ''))));
+	}
+
+	private function respondCert(array $check, string $file, string $url): void {
+		$this->respond([
+			'ok' => true,
+			'cert' => Pairing::describe($check, $url) + ['file' => $file],
+			'preview' => SettingsView::preview($check)
+		]);
 	}
 
 	private function respond(array $data): void {

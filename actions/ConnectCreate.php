@@ -91,18 +91,7 @@ class ConnectCreate extends CController {
 
 		$server = Pairing::server();
 
-		$link = 'zbxview://add?'.http_build_query([
-			'url' => $server['url'],
-			'name' => $server['name'],
-			'auth' => 'token',
-			'token' => $token,
-			'self_signed' => $server['self_signed'] ? '1' : '0'
-		] + ($server['pin'] !== '' ? ['pin' => $server['pin']] : [])
-		+ ($client_cert ? array_filter([
-			'cc' => $client_cert['cc'],
-			'ck' => $client_cert['ck'],
-			'ch' => $client_cert['ch']
-		], 'strlen') : []), '', '&', PHP_QUERY_RFC3986);
+		$link = Pairing::link($server, $token, $client_cert);
 
 		$this->respond([
 			'link' => $link,

@@ -47,6 +47,8 @@ require_once '/usr/share/zabbix/include/translateDefines.inc.php';
 $M = dirname(__DIR__);
 require_once "$M/includes/Lang.php";
 require_once "$M/includes/Pairing.php";
+require_once "$M/includes/Ui.php";
+require_once "$M/actions/SettingsView.php";
 require_once "$M/actions/SettingsUpdate.php";
 
 $rec = api('module.get', ['output' => ['moduleid', 'config'], 'filter' => ['id' => 'zbxviewconnect']])[0];
@@ -64,30 +66,36 @@ $run = function (array $input) {
 $live = fn() => api('module.get', ['output' => ['config'], 'moduleids' => [$rec['moduleid']]])[0]['config'];
 
 try {
-	$r = $run(['section' => 'settings', 'url' => 'https://zabbix.example.com/', 'name' => 'Test', 'self_signed' => '0']);
+	$cert = fn($f) => base64_encode(file_get_contents($f));
+	$r = $run(['action' => 'save', 'url' => 'https://zabbix.example.com/', 'name' => 'Test', 'server_cert' => '1', 'cert_required' => '0', 'hosts' => '']);
 	$c = $live();
-	$ok(($r['ok'] ?? false) && $c['url'] === 'https://zabbix.example.com' && $c['name'] === 'Test' && $c['self_signed'] === '0',
-		'settings saved (trailing slash trimmed)');
-	$r = $run(['section' => 'settings', 'url' => 'ftp://x', 'name' => '', 'self_signed' => 'auto']);
+	$ok(($r['ok'] ?? false) && $c['url'] === 'https://zabbix.example.com' && $c['name'] === 'Test' && $c['self_signed'] === '1',
+		'settings saved in one go (trailing slash trimmed)');
+	$r = $run(['action' => 'save', 'url' => 'ftp://x', 'name' => '', 'server_cert' => '0', 'cert_required' => '0', 'hosts' => '']);
 	$ok(isset($r['error']) && $live()['url'] === 'https://zabbix.example.com', 'bad address refused, config untouched');
 
-	$r = $run(['section' => 'certificate', 'cert' => base64_encode(file_get_contents($pem)), 'password' => '', 'hosts' => 'a.example.com']);
-	$c = $live();
-	$ok(($r['ok'] ?? false) && ($r['cert']['cn'] ?? '') !== '' && $r['cert']['hosts'] === 'a.example.com'
-		&& strpos($c['client_cert'], '-----BEGIN') !== false, 'PEM certificate imported: CN '.($r['cert']['cn'] ?? '?').', valid to '.($r['cert']['valid_to'] ?? '?'));
+	$r = $run(['action' => 'check', 'cert' => $cert($pem), 'cert_name' => 'client.pem', 'password' => '', 'hosts' => 'a.example.com']);
+	$ok(($r['ok'] ?? false) && $r['cert']['curve'] === 'P-256' && $r['cert']['file'] === 'client.pem'
+		&& $r['preview']['ck_len'] > 0 && !isset($r['preview']['ck']) && ($live()['client_cert'] ?? '') === '',
+		'check: valid, P-256, preview without the key, nothing stored');
+	$r = $run(['action' => 'check', 'cert' => $cert($p12), 'cert_name' => 'c.p12', 'password' => 'wrong', 'hosts' => '']);
+	$ok(isset($r['error']), 'check: PKCS#12 with a wrong password refused: '.($r['error'] ?? ''));
+	$r = $run(['action' => 'check', 'cert' => $cert($rsa), 'cert_name' => 'rsa.pem', 'password' => '', 'hosts' => '']);
+	$ok(isset($r['error']), 'check: RSA refused: '.($r['error'] ?? ''));
 
-	$r = $run(['section' => 'certificate', 'cert' => base64_encode(file_get_contents($p12)), 'password' => 'wrong', 'hosts' => '']);
-	$ok(isset($r['error']) && $live()['client_cert_hosts'] === 'a.example.com', 'PKCS#12 with a wrong password refused: '.($r['error'] ?? ''));
-	$r = $run(['section' => 'certificate', 'cert' => base64_encode(file_get_contents($rsa)), 'password' => '', 'hosts' => '']);
-	$ok(isset($r['error']), 'RSA certificate refused: '.($r['error'] ?? ''));
-	$r = $run(['section' => 'certificate', 'cert' => base64_encode(file_get_contents($p12)), 'password' => $p12pw, 'hosts' => '']);
+	$r = $run(['action' => 'save', 'url' => 'https://zabbix.example.com', 'name' => 'Test', 'server_cert' => '0', 'cert_required' => '1', 'hosts' => '']);
+	$ok(isset($r['error']), 'save: certificate required but none chosen -> refused');
+	$r = $run(['action' => 'save', 'url' => 'https://zabbix.example.com', 'name' => 'Test', 'server_cert' => '0', 'cert_required' => '1',
+		'cert' => $cert($p12), 'cert_name' => 'C:\\certs\\client.p12', 'password' => $p12pw, 'hosts' => 'a.example.com, *.example.com']);
 	$c = $live();
-	$ok(($r['ok'] ?? false) && strpos($c['client_cert'], '-----BEGIN') === false && $r['cert']['hosts'] === 'zabbix.example.com',
-		'PKCS#12 imported (stored as base64), goes to the server host by default');
-
-	$r = $run(['section' => 'remove_cert']);
+	$ok(($r['ok'] ?? false) && $c['client_cert_name'] === 'client.p12' && $c['client_cert_hosts'] === 'a.example.com,*.example.com'
+		&& strpos($c['client_cert'], '-----BEGIN') === false, 'save: PKCS#12 stored with file name and hosts');
+	$r = $run(['action' => 'save', 'url' => 'https://zabbix.example.com', 'name' => 'Test', 'server_cert' => '0', 'cert_required' => '1', 'hosts' => 'b.example.com']);
+	$ok(($r['ok'] ?? false) && $live()['client_cert_hosts'] === 'b.example.com', 'save without a new file keeps the certificate, updates hosts');
+	$r = $run(['action' => 'save', 'url' => 'https://zabbix.example.com', 'name' => 'Test', 'server_cert' => '0', 'cert_required' => '0', 'hosts' => '']);
 	$c = $live();
-	$ok(($r['ok'] ?? false) && $c['client_cert'] === '' && $r['cert'] === ['set' => false], 'certificate removed');
+	$ok(($r['ok'] ?? false) && $c['client_cert'] === '' && $c['client_cert_name'] === '' && $r['cert'] === ['set' => false, 'file' => ''],
+		'required off: certificate forgotten');
 }
 finally {
 	api('module.update', [['moduleid' => $rec['moduleid'], 'config' => $original]]);

@@ -52,7 +52,7 @@ class Pairing {
 	/**
 	 * Address, name and certificate flag the QR code carries.
 	 */
-	public static function server(): array {
+	public static function server(bool $probe = true): array {
 		global $ZBX_SERVER_NAME;
 
 		$module = APP::ModuleManager()->getModule('zbxviewconnect');
@@ -66,7 +66,8 @@ class Pairing {
 		// self_signed: "auto" (default) = look at the certificate; "1" = always
 		// pin; "0" = never (public CA, e.g. behind Cloudflare).
 		$mode = strtolower(trim((string) ($config['self_signed'] ?? 'auto')));
-		$cert = in_array($mode, ['0', 'false', 'no'], true) ? null : self::certificate($url);
+		// $probe=false: for display only - no connection to the address.
+		$cert = !$probe || in_array($mode, ['0', 'false', 'no'], true) ? null : self::certificate($url);
 		$pin = '';
 
 		if ($cert !== null && ($mode !== 'auto' || !$cert['trusted'])) {
@@ -112,6 +113,7 @@ class Pairing {
 
 		return [
 			'set' => true,
+			'curve' => $cert['curve'] ?? '',
 			'cn' => $cert['subject'],
 			'valid_to' => $cert['valid_to'] > 0 ? date('Y-m-d', $cert['valid_to']) : '',
 			'expired' => $cert['valid_to'] > 0 && $cert['valid_to'] < time(),
@@ -276,13 +278,36 @@ class Pairing {
 			static fn($h) => strtolower(trim((string) $h)), preg_split('/[,;\s]+/', $hosts)
 		), static fn($h) => $h !== ''));
 
+		$curve = (string) ($details['ec']['curve_name'] ?? '');
+		$curve_names = ['prime256v1' => 'P-256', 'secp384r1' => 'P-384', 'secp521r1' => 'P-521'];
+
 		return [
+			'curve' => $curve_names[$curve] ?? $curve,
 			'cc' => $url64($der($cert_pem)),
 			'ck' => $url64($der($key_pem)),
 			'ch' => implode(',', $list),
 			'subject' => (string) (openssl_x509_parse($cert)['subject']['CN'] ?? ''),
 			'valid_to' => (int) (openssl_x509_parse($cert)['validTo_time_t'] ?? 0)
 		];
+	}
+
+	/**
+	 * The zbxview://add link for $server (Pairing::server()), $token and the
+	 * client certificate (clientCert() result, may be []).
+	 */
+	public static function link(array $server, string $token, array $cert): string {
+		return 'zbxview://add?'.http_build_query([
+			'url' => $server['url'],
+			'name' => $server['name'],
+			'auth' => 'token',
+			'token' => $token,
+			'self_signed' => $server['self_signed'] ? '1' : '0'
+		] + (($server['pin'] ?? '') !== '' ? ['pin' => $server['pin']] : [])
+		+ ($cert && !isset($cert['error']) ? array_filter([
+			'cc' => $cert['cc'],
+			'ck' => $cert['ck'],
+			'ch' => $cert['ch']
+		], 'strlen') : []), '', '&', PHP_QUERY_RFC3986);
 	}
 
 	/**

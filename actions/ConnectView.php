@@ -9,6 +9,7 @@ use CRoleHelper;
 use CWebUser;
 use Modules\ZbxViewConnect\Includes\Lang;
 use Modules\ZbxViewConnect\Includes\Pairing;
+use Modules\ZbxViewConnect\Includes\Ui;
 
 /**
  * The "Connect application" page. Not paired yet: connect.js asks
@@ -31,12 +32,18 @@ class ConnectView extends CController {
 
 	protected function doAction(): void {
 		$active = Pairing::active((string) CWebUser::$data['userid']);
+		$server = Pairing::server(false);
 
 		$this->setResponse(new CControllerResponseData([
 			'title' => Lang::t('title', 'Connect application'),
+			'theme' => Ui::themeClass(),
+			'user' => getUserFullname(CWebUser::$data),
+			'server_url' => $server['url'],
+			'server_name' => $server['name'],
 			// A token is useless to the app when the role may not use the API.
 			'api_access' => CWebUser::checkAccess('api.access'),
 			'paired' => $active !== null,
+			'token_name' => $active !== null ? (string) $active['name'] : '',
 			'created' => $active !== null ? zbx_date2str(DATE_TIME_FORMAT, (int) $active['created_at']) : '',
 			'lastaccess' => $active !== null && (int) $active['lastaccess'] > 0
 				? zbx_date2str(DATE_TIME_FORMAT, (int) $active['lastaccess'])

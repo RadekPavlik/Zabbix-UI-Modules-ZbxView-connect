@@ -2,19 +2,20 @@
 
 namespace Modules\ZbxViewConnect\Actions;
 
-use APP;
 use CController;
 use CControllerResponseData;
 use CCsrfTokenHelper;
 use CWebUser;
 use Modules\ZbxViewConnect\Includes\Lang;
 use Modules\ZbxViewConnect\Includes\Pairing;
+use Modules\ZbxViewConnect\Includes\Ui;
 
 /**
- * Administration → General → ZbxView connect: what the QR code carries
+ * Administration → Mobile app (ZbxView connect): what the QR code carries
  * (address, name, server certificate handling) and the shared client
- * certificate, imported and checked right here instead of on the server's
- * file system. Super admins only - the config is module-wide.
+ * certificate, imported and checked right here. A preview shows the codes
+ * users will scan - with a placeholder token and key, never the real ones.
+ * Super admins only - the config is module-wide.
  */
 class SettingsView extends CController {
 
@@ -32,18 +33,36 @@ class SettingsView extends CController {
 
 	protected function doAction(): void {
 		$config = Pairing::config();
-		$cert = Pairing::describe(Pairing::clientCert(), (string) ($config['url'] ?? ''));
+		$cert = Pairing::clientCert();
 
 		$this->setResponse(new CControllerResponseData([
 			'title' => Lang::t('settings_title', 'ZbxView connect'),
+			'theme' => Ui::themeClass(),
 			'url' => (string) ($config['url'] ?? ''),
 			'url_auto' => Pairing::frontendUrl(),
 			'name' => (string) ($config['name'] ?? ''),
-			'self_signed' => (string) ($config['self_signed'] ?? 'auto'),
-			'cert' => $cert,
+			'name_auto' => Pairing::server(false)['name'],
+			// "auto" (pin only an untrusted certificate) shows as Public CA:
+			// the two options of the page are the two real cases.
+			'server_cert' => (string) ($config['self_signed'] ?? 'auto') === '1' ? '1' : '0',
+			'cert' => Pairing::describe($cert, (string) ($config['url'] ?? '')),
+			'cert_file' => (string) ($config['client_cert_name'] ?? ''),
 			'cert_hosts' => (string) ($config['client_cert_hosts'] ?? ''),
-			'csrf' => CCsrfTokenHelper::get('zbxview.connect.settings.update'),
-			'module_ok' => APP::ModuleManager()->getModule('zbxviewconnect') !== null
+			'preview' => self::preview($cert),
+			'csrf' => CCsrfTokenHelper::get('zbxview.connect.settings.update')
 		]));
+	}
+
+	/**
+	 * What settings.js needs to draw the preview: the certificate part of the
+	 * link with the KEY REPLACED by a placeholder of the same length, so the
+	 * codes have their real size but the page never carries the key.
+	 */
+	public static function preview(array $cert): array {
+		if ($cert === [] || isset($cert['error'])) {
+			return ['cc' => '', 'ck_len' => 0, 'ch' => ''];
+		}
+
+		return ['cc' => $cert['cc'], 'ck_len' => strlen($cert['ck']), 'ch' => $cert['ch']];
 	}
 }

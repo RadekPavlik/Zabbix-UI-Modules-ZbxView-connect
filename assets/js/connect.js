@@ -1,11 +1,14 @@
 /*
- * ZbxView connect page.
+ * ZbxView connect - user page.
  * Not paired: asks zbxview.connect.create for a code as soon as the page
  * opens. Paired: "Pair again" (after a confirm) replaces the token.
- * The returned zbxview://add link is drawn as a QR code (qrcode.js, MIT, bundled).
+ * The code is shown for HIDE_AFTER seconds, then taken off the screen.
+ * A link with a client certificate comes as parts shown in turn.
+ * QR drawing: qrcode.js (MIT, bundled).
  */
 (() => {
 	const $ = (id) => document.getElementById(id);
+	const HIDE_AFTER = 300;
 
 	function draw(text) {
 		const qr = qrcode(0, 'M');
@@ -15,34 +18,16 @@
 		$('zvc-qr').innerHTML = qr.createSvgTag({cellSize: 6, margin: 4, scalable: true});
 	}
 
-	// A link with a client certificate is too big for one readable code: the
-	// parts are shown in turn and the app collects them in any order.
-	let timer = null;
-
-	function show(parts, label) {
-		clearInterval(timer);
-		timer = null;
-		let i = 0;
-		const step = () => {
-			draw(parts[i]);
-			$('zvc-part').textContent = parts.length > 1
-				? label.replace('{i}', i + 1).replace('{n}', parts.length)
-				: '';
-			i = (i + 1) % parts.length;
-		};
-		step();
-		$('zvc-qr').classList.toggle('zvc-qr-multi', parts.length > 1);
-		if (parts.length > 1) {
-			timer = setInterval(step, 1000);
-		}
-	}
-
 	function init() {
 		const root = document.querySelector('.zvc');
 
-		if (root === null) {
+		if (root === null || $('zvc-result') === null) {
 			return;
 		}
+
+		let link = '';
+		let rotate = null;
+		let countdown = null;
 
 		// One line for progress and errors; red only for errors.
 		const say = (text, is_error) => {
@@ -50,7 +35,48 @@
 			el.textContent = text;
 			el.classList.toggle('zvc-error-on', !!is_error);
 		};
-		const error = (text) => say(text, true);
+
+		function show(parts) {
+			clearInterval(rotate);
+			let i = 0;
+			const step = () => {
+				draw(parts[i]);
+				$('zvc-part').textContent = parts.length > 1
+					? root.dataset.partLabel.replace('{i}', i + 1).replace('{n}', parts.length)
+					: '';
+				i = (i + 1) % parts.length;
+			};
+			step();
+			$('zvc-qr').classList.toggle('zvc-qr-multi', parts.length > 1);
+			if (parts.length > 1) {
+				rotate = setInterval(step, 1000);
+			}
+		}
+
+		function startTimer() {
+			let left = HIDE_AFTER;
+			const tick = () => {
+				const m = Math.floor(left / 60), s = String(left % 60).padStart(2, '0');
+				$('zvc-timer-text').textContent = root.dataset.hides + ' ' + m + ':' + s;
+				$('zvc-bar').firstElementChild.style.width = (left / HIDE_AFTER * 100) + '%';
+				if (left-- <= 0) {
+					hide();
+				}
+			};
+			$('zvc-timer').classList.remove('zvc-hidden');
+			tick();
+			countdown = setInterval(tick, 1000);
+		}
+
+		// The code is a credential: off the screen, then the page shows the state.
+		function hide() {
+			clearInterval(rotate);
+			clearInterval(countdown);
+			link = '';
+			$('zvc-qr').innerHTML = '';
+			$('zvc-open').removeAttribute('href');
+			location.reload();
+		}
 
 		function create(repair) {
 			const button = $('zvc-repair');
@@ -75,18 +101,19 @@
 						return;
 					}
 					if (r.error !== undefined || r.link === undefined) {
-						error(r.error || 'Error');
+						say(r.error || 'Error', true);
 						return;
 					}
 					say('', false);
-					show(Array.isArray(r.parts) && r.parts.length ? r.parts : [r.link], root.dataset.partLabel);
+					link = r.link;
+					show(Array.isArray(r.parts) && r.parts.length ? r.parts : [r.link]);
 					$('zvc-open').href = r.link;
-					if ($('zvc-status') !== null) {
-						$('zvc-status').classList.add('zvc-hidden');
-					}
+					$('zvc-token-name').textContent = r.token_name || '';
+					$('zvc-empty').classList.add('zvc-hidden');
 					$('zvc-result').classList.remove('zvc-hidden');
+					startTimer();
 				})
-				.catch((e) => error(String(e)))
+				.catch((e) => say(String(e), true))
 				.finally(() => {
 					if (button !== null) {
 						button.disabled = false;
@@ -103,13 +130,16 @@
 			});
 		}
 
-		// The code is a credential: "Done" takes it off the screen and shows the state.
-		$('zvc-done').addEventListener('click', () => {
-			clearInterval(timer);
-			$('zvc-qr').innerHTML = '';
-			$('zvc-open').removeAttribute('href');
-			location.reload();
+		$('zvc-copy').addEventListener('click', () => {
+			if (link === '') {
+				return;
+			}
+			navigator.clipboard.writeText(link).then(() => {
+				$('zvc-copy').textContent = root.dataset.copied;
+			});
 		});
+
+		$('zvc-done').addEventListener('click', hide);
 
 		if (root.dataset.paired !== '1' && root.dataset.api === '1') {
 			create(false);

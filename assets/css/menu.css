@@ -1,0 +1,15 @@
+/* ZbxView connect - phone icon in front of the module's menu entries
+   (User settings → Connect application, Administration → Mobile app).
+   Zabbix's icon font has no phone, so an SVG mask takes the link colour. */
+.menu-user a[href*="action=zbxview.connect"]::before,
+.menu-main a[href*="action=zbxview.connect.settings"]::before {
+	content: '';
+	display: inline-block;
+	width: 13px;
+	height: 15px;
+	margin-right: 7px;
+	vertical-align: -2px;
+	background-color: currentColor;
+	-webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 20'%3E%3Cpath d='M4 1h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2zm0 2v12h8V3H4zm4 13.2a1 1 0 1 0 0 2 1 1 0 0 0 0-2z'/%3E%3C/svg%3E") center / contain no-repeat;
+	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 20'%3E%3Cpath d='M4 1h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2zm0 2v12h8V3H4zm4 13.2a1 1 0 1 0 0 2 1 1 0 0 0 0-2z'/%3E%3C/svg%3E") center / contain no-repeat;
+}

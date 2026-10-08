@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.3.0 — 2026-10-08
+
+- **New look for both pages, following the user's Zabbix theme** (light,
+  dark and both high-contrast themes).
+- **Admin page moved to Administration → Mobile app.** Two numbered cards
+  (connection in the QR code; client certificate with a *Required* switch,
+  file box with *Replace*, password, host chips, *Check certificate*), one
+  *Save* / *Discard changes* for everything, and a live **preview** of the
+  codes users scan (placeholder token and key - the page never carries the
+  real key). The certificate's file name and key curve are shown.
+- **Connect application**: server card (name, address, paired / last used,
+  *Pair again*) and a code card with a **5-minute auto-hide countdown**,
+  token facts, *Open in the app*, *Copy link*, *Hide now*.
+- **Phone icon** in front of both menu entries (global `menu.css`).
+
 ## 1.2.0 — 2026-10-08
 
 - **Administration → General → ZbxView connect** (super admins): server
