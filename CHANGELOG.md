@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.3 — 2026-10-08
+
+- "Discard changes" is a regular bordered button (it read as plain text).
+
 ## 1.3.2 — 2026-10-08
 
 - Admin entry and page renamed to **Mobile configuration** (cs Konfigurace

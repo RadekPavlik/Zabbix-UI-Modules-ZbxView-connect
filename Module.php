@@ -16,7 +16,7 @@ use Zabbix\Core\CModule;
  */
 class Module extends CModule {
 
-	public const VERSION = '1.3.2';
+	public const VERSION = '1.3.3';
 
 	public function init(): void {
 		// Administration → Mobile configuration: module-wide settings and the client

@@ -125,7 +125,7 @@ $certificate = (new CDiv([
 $footer = (new CDiv([
 	(new CSimpleButton(Lang::t('save', 'Save')))->setId('zvc-s-save')->addClass('zvc-btn'),
 	(new CSimpleButton(Lang::t('s_discard', 'Discard changes')))->setId('zvc-s-discard')
-		->addClass('zvc-btn')->addClass('zvc-btn-link'),
+		->addClass('zvc-btn')->addClass('zvc-btn-alt'),
 	(new CSpan(Lang::t('s_footer_note', 'Applies to codes generated from now on; phones already set up keep working.')))
 		->addClass('zvc-note'),
 	(new CSpan())->setId('zvc-s-msg')->addClass('zvc-msg')
