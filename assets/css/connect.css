@@ -78,3 +78,12 @@
 }
 
 .zvc-hidden { display: none; }
+
+/* Administration page */
+.zvc-settings .zvc-card { width: 520px; }
+.zvc-settings .zvc-field input[type="password"],
+.zvc-settings .zvc-field input[type="file"] { box-sizing: border-box; width: 100%; }
+.zvc-settings .zvc-field z-select,
+.zvc-settings .zvc-field .z-select { width: 100%; }
+.zvc-msg { opacity: .8; }
+.zvc-msg.zvc-error-on { opacity: 1; }

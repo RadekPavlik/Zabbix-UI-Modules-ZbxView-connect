@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.0 — 2026-10-08
+
+- **Administration → General → ZbxView connect** (super admins): server
+  address, name and server-certificate handling for the QR code, and the
+  shared **client certificate import** right in the GUI - upload .p12/.pfx
+  or .pem, password, hosts. The certificate is checked before it is stored
+  (EC key, key matches, password, readable) and the page shows its CN,
+  validity and hosts; "Remove certificate" forgets it.
+- `tools/check_settings.php` runs the save action against a live Zabbix and
+  restores the module config afterwards.
+
 ## 1.1.0 — 2026-10-08
 
 - **No form any more.** First open of *Connect application* creates the code

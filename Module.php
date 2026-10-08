@@ -16,9 +16,23 @@ use Zabbix\Core\CModule;
  */
 class Module extends CModule {
 
-	public const VERSION = '1.1.0';
+	public const VERSION = '1.2.0';
 
 	public function init(): void {
+		// Administration → General → ZbxView connect: module-wide settings and
+		// the client certificate import, for super admins.
+		if (CWebUser::getType() == USER_TYPE_SUPER_ADMIN) {
+			$admin = APP::Component()->get('menu.main')->find(_('Administration'));
+			$general = $admin !== null ? $admin->getSubMenu()->find(_('General')) : null;
+
+			if ($general !== null) {
+				$general->getSubMenu()->add(
+					(new CMenuItem(Lang::t('settings_title', 'ZbxView connect')))
+						->setAction('zbxview.connect.settings')
+				);
+			}
+		}
+
 		// Only users who may create their own API tokens get the entry - the
 		// same rule that shows "API tokens" in the user menu.
 		if (CWebUser::isGuest() || !CWebUser::checkAccess(CRoleHelper::ACTIONS_MANAGE_API_TOKENS)) {
@@ -40,8 +54,15 @@ class Module extends CModule {
 	public function getAssets(): array {
 		$assets = parent::getAssets();
 
-		// Only on its own page: the QR library has no business on every screen.
-		if (APP::Component()->router->getAction() === 'zbxview.connect') {
+		// Only on its own pages: the QR library has no business on every screen.
+		$action = APP::Component()->router->getAction();
+
+		if ($action === 'zbxview.connect.settings') {
+			$assets['js'][] = 'settings.js?v='.self::VERSION;
+			$assets['css'][] = 'connect.css?v='.self::VERSION;
+		}
+
+		if ($action === 'zbxview.connect') {
 			$assets['js'][] = 'qrcode.js?v='.self::VERSION;
 			$assets['js'][] = 'connect.js?v='.self::VERSION;
 			$assets['css'][] = 'connect.css?v='.self::VERSION;

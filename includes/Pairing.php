@@ -86,6 +86,40 @@ class Pairing {
 	}
 
 	/**
+	 * The module config with manifest defaults for empty keys.
+	 */
+	public static function config(): array {
+		$module = APP::ModuleManager()->getModule('zbxviewconnect');
+
+		return self::withDefaults($module !== null ? $module->getConfig() : []);
+	}
+
+	/**
+	 * A clientCertFrom() result for people: set / error code / CN, validity
+	 * and the hosts it goes to (the server's host when none are named).
+	 */
+	public static function describe(array $cert, string $url = ''): array {
+		if ($cert === []) {
+			return ['set' => false];
+		}
+
+		if (isset($cert['error'])) {
+			return ['set' => true, 'error' => $cert['error']];
+		}
+
+		$hosts = $cert['ch'] !== '' ? $cert['ch'] : (string) (parse_url($url !== '' ? $url : self::frontendUrl(),
+			PHP_URL_HOST) ?? '');
+
+		return [
+			'set' => true,
+			'cn' => $cert['subject'],
+			'valid_to' => $cert['valid_to'] > 0 ? date('Y-m-d', $cert['valid_to']) : '',
+			'expired' => $cert['valid_to'] > 0 && $cert['valid_to'] < time(),
+			'hosts' => str_replace(',', ', ', $hosts)
+		];
+	}
+
+	/**
 	 * Config saved in Zabbix wins; a key it lacks (module registered by an
 	 * older version, or never configured) falls back to manifest.json.
 	 */
