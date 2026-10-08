@@ -1,4 +1,4 @@
-# ZbxView Connect - lv_LV
+# ZbxView connect - lv_LV
 menu: 'Pievienot lietotni'
 title: 'Pievienot lietotni'
 form_title: 'Pievienot šo serveri lietotnei'
@@ -26,4 +26,4 @@ copied: 'Nokopēts'
 err_url: 'Ievadiet adresi formā https://host/ceļš.'
 err_create: 'API marķieri neizdevās izveidot.'
 never: 'Nekad'
-token_description: 'Izveidojis ZbxView Connect mobilajai lietotnei.'
+token_description: 'Izveidojis ZbxView connect mobilajai lietotnei.'

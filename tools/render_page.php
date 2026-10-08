@@ -1,4 +1,6 @@
 <?php
+// CLI only: the module directory is reachable through the web server.
+if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 // Renders the page body (form + result) to HTML with the module's own view,
 // for a screenshot outside a logged-in browser.
 class CWebUser { public static $data = ['lang' => 'en_US']; public static function get($k) { return self::$data[$k] ?? null; } }

@@ -1,4 +1,4 @@
-# ZbxView Connect - en_US
+# ZbxView connect - en_US
 menu: 'Connect application'
 title: 'Connect application'
 form_title: 'Add this server to the app'
@@ -26,4 +26,4 @@ copied: 'Copied'
 err_url: 'Enter the address as https://host/path.'
 err_create: 'The API token could not be created.'
 never: 'Never'
-token_description: 'Created by ZbxView Connect for the mobile app.'
+token_description: 'Created by ZbxView connect for the mobile app.'

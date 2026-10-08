@@ -1,4 +1,4 @@
-# ZbxView Connect - cs_CZ
+# ZbxView connect - cs_CZ
 menu: 'Připojit aplikaci'
 title: 'Připojit aplikaci'
 form_title: 'Přidat tento server do aplikace'
@@ -26,4 +26,4 @@ copied: 'Zkopírováno'
 err_url: 'Zadejte adresu ve tvaru https://host/cesta.'
 err_create: 'API token se nepodařilo vytvořit.'
 never: 'Nikdy'
-token_description: 'Vytvořeno modulem ZbxView Connect pro mobilní aplikaci.'
+token_description: 'Vytvořeno modulem ZbxView connect pro mobilní aplikaci.'

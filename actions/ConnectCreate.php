@@ -71,7 +71,7 @@ class ConnectCreate extends CController {
 			// Token names are unique per user; the timestamp keeps them apart
 			// and tells which phone was connected when.
 			'name' => $token_name,
-			'description' => Lang::t('token_description', 'Created by ZbxView Connect for the mobile app.'),
+			'description' => Lang::t('token_description', 'Created by ZbxView connect for the mobile app.'),
 			'userid' => CWebUser::$data['userid'],
 			'expires_at' => $expires,
 			'status' => ZBX_AUTH_TOKEN_ENABLED

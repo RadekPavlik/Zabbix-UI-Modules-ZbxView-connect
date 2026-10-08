@@ -1,4 +1,4 @@
-# ZbxView Connect
+# ZbxView connect
 
 Zabbix frontend module that connects the **ZbxView / Zabbix mobile app** to a
 server with a QR code — no typing of URLs and tokens on a phone, no MDM needed.
@@ -17,15 +17,15 @@ check the summary, **Add server**. Done.
 ## Install
 
 ```bash
-cp -r zabbix-module-zbxview-connect /usr/share/zabbix/modules/
-chown -R apache:apache /usr/share/zabbix/modules/zabbix-module-zbxview-connect   # www-data on Debian/Ubuntu
+cp -r Zabbix-UI-Modules-ZbxView-connect /usr/share/zabbix/modules/
+chown -R apache:apache /usr/share/zabbix/modules/Zabbix-UI-Modules-ZbxView-connect   # www-data on Debian/Ubuntu
 ```
 
 *Administration → General → Modules → Scan directory*, enable **ZbxView
-Connect**. Or through the API:
+connect**. Or through the API:
 
 ```json
-module.create  {"id": "zbxviewconnect", "relative_path": "modules/zabbix-module-zbxview-connect", "status": 1}
+module.create  {"id": "zbxviewconnect", "relative_path": "modules/Zabbix-UI-Modules-ZbxView-connect", "status": 1}
 ```
 
 ## What the page does

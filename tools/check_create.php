@@ -1,4 +1,6 @@
 <?php
+// CLI only: the module directory is reachable through the web server.
+if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 // Runs ConnectCreate against a live Zabbix: API calls go to the real API as
 // the token's user, the rest is the module's own code. Prints the response,
 // checks the zbxview://add link, then deletes the token it created.

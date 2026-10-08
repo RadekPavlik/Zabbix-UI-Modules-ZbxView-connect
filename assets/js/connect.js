@@ -1,5 +1,5 @@
 /*
- * ZbxView Connect page: posts the form to zbxview.connect.create, then draws
+ * ZbxView connect page: posts the form to zbxview.connect.create, then draws
  * the returned zbxview://add link as a QR code (qrcode.js, MIT, bundled).
  */
 (() => {

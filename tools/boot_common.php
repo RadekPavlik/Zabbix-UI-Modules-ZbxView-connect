@@ -1,4 +1,6 @@
 <?php
+// CLI only: the module directory is reachable through the web server.
+if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 // Shared bootstrap for the offline checks: Zabbix autoloading plus the few
 // globals the frontend normally has set up.
 require_once '/usr/share/zabbix/vendor/autoload.php';
