@@ -1,6 +1,6 @@
 # ZbxView connect - cs_CZ
-menu: 'Připojit aplikaci'
-title: 'Připojit aplikaci'
+menu: 'Připojení telefonu'
+title: 'Připojení telefonu'
 no_api: 'Vaše uživatelská role nemá přístup k API, aplikace by se nepřihlásila. Obraťte se na správce Zabbixu.'
 paired_title: 'Aplikace je připojená'
 paired_since: 'Spárováno'

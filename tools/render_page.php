@@ -18,7 +18,7 @@ class _Page { private array $items = []; private string $title = '';
 		foreach ($this->items as $i) echo $i; echo '</main>'; } }
 $src = file_get_contents("$M/views/connect.view.php");
 $src = str_replace(['(new CHtmlPage())', 'declare(strict_types = 0);'], ['(new _Page())', ''], $src);
-$data = ['title' => Modules\ZbxViewConnect\Includes\Lang::t('title', 'Connect application'),
+$data = ['title' => Modules\ZbxViewConnect\Includes\Lang::t('title', 'Mobile connect'),
 	'api_access' => true, 'paired' => ($argv[2] ?? '0') === '1',
 	'created' => '2026-10-08 10:15', 'lastaccess' => '2026-10-08 10:16', 'csrf' => 'x'];
 eval('?>'.$src);

@@ -3,7 +3,7 @@
 Zabbix frontend module that connects the **ZbxView / Zabbix mobile app** to a
 server with a QR code — no typing of URLs and tokens on a phone, no MDM needed.
 
-*User settings → Connect application* creates an API token for the signed-in
+*User settings → Mobile connect* creates an API token for the signed-in
 user and shows it as a QR code. In the app: **Add server → Scan QR code**,
 check the summary, **Add server**. Done.
 

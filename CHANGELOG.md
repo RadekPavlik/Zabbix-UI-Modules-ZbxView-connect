@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.1 — 2026-10-08
+
+- The user page is now called **Mobile connect** (cs: Připojení telefonu,
+  lv: Tālruņa savienojums) - menu entry and page title.
+- The phone icon sits after the menu text instead of before it.
+
 ## 1.3.0 — 2026-10-08
 
 - **New look for both pages, following the user's Zabbix theme** (light,

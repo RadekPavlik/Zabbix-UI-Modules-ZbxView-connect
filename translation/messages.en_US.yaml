@@ -1,6 +1,6 @@
 # ZbxView connect - en_US
-menu: 'Connect application'
-title: 'Connect application'
+menu: 'Mobile connect'
+title: 'Mobile connect'
 no_api: 'Your user role does not allow API access, so the app could not sign in. Ask your Zabbix administrator.'
 paired_title: 'The app is connected'
 paired_since: 'Paired'

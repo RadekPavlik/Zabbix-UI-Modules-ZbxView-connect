@@ -12,7 +12,7 @@ use Modules\ZbxViewConnect\Includes\Pairing;
 use Modules\ZbxViewConnect\Includes\Ui;
 
 /**
- * The "Connect application" page. Not paired yet: connect.js asks
+ * The "Mobile connect" page. Not paired yet: connect.js asks
  * ConnectCreate for a code right away. Paired: the page shows since when and
  * offers "Pair again", which replaces the token.
  */
@@ -35,7 +35,7 @@ class ConnectView extends CController {
 		$server = Pairing::server(false);
 
 		$this->setResponse(new CControllerResponseData([
-			'title' => Lang::t('title', 'Connect application'),
+			'title' => Lang::t('title', 'Mobile connect'),
 			'theme' => Ui::themeClass(),
 			'user' => getUserFullname(CWebUser::$data),
 			'server_url' => $server['url'],

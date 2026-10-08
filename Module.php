@@ -10,18 +10,18 @@ use Modules\ZbxViewConnect\Includes\Lang;
 use Zabbix\Core\CModule;
 
 /**
- * "Connect application" under User settings, next to API tokens: the page
+ * "Mobile connect" under User settings, next to API tokens: the page
  * creates a token for the signed-in user and shows it as a QR code that the
  * mobile app scans to add this server.
  */
 class Module extends CModule {
 
-	public const VERSION = '1.3.0';
+	public const VERSION = '1.3.1';
 
 	public function init(): void {
 		// Administration → Mobile app: module-wide settings and the client
-		// certificate import, for super admins. (The phone icon in front of
-		// it and of "Connect application" comes from assets/css/menu.css.)
+		// certificate import, for super admins. (The phone icon after this
+		// entry and after "Mobile connect" comes from assets/css/menu.css.)
 		if (CWebUser::getType() == USER_TYPE_SUPER_ADMIN) {
 			$admin = APP::Component()->get('menu.main')->find(_('Administration'));
 
@@ -47,7 +47,7 @@ class Module extends CModule {
 		}
 
 		$settings->getSubMenu()->add(
-			(new CMenuItem(Lang::t('menu', 'Connect application')))->setAction('zbxview.connect')
+			(new CMenuItem(Lang::t('menu', 'Mobile connect')))->setAction('zbxview.connect')
 		);
 	}
 

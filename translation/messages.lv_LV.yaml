@@ -1,6 +1,6 @@
 # ZbxView connect - lv_LV
-menu: 'Pievienot lietotni'
-title: 'Pievienot lietotni'
+menu: 'Tālruņa savienojums'
+title: 'Tālruņa savienojums'
 no_api: 'Jūsu lietotāja lomai nav API piekļuves, lietotne nevarētu pieteikties. Sazinieties ar Zabbix administratoru.'
 paired_title: 'Lietotne ir pievienota'
 paired_since: 'Savienots'
