@@ -70,7 +70,7 @@ $result = (new CDiv([
 			(new CDiv([new CTag('small', true, Lang::t('device', 'Device')), (new CTag('b', true, ''))->setId('zvc-device')])),
 			(new CDiv([new CTag('small', true, Lang::t('server', 'Server')), new CTag('b', true, $data['server_name'])])),
 			(new CDiv([new CTag('small', true, Lang::t('token', 'Token')), (new CTag('b', true, ''))->setId('zvc-token-name')->addClass('zvc-mono')])),
-			(new CDiv([new CTag('small', true, Lang::t('expires', 'Expires')), new CTag('b', true, Lang::t('never', 'Never'))]))
+			(new CDiv([new CTag('small', true, Lang::t('expires', 'Expires')), new CTag('b', true, Lang::t('never_once_used', 'Never, once the phone has used it'))]))
 		]))->addClass('zvc-stack')
 	]))->addClass('zvc-qr-row'),
 	(new CDiv([Ui::icon('warn'), new CSpan(Lang::t('secret_warn',
@@ -117,15 +117,18 @@ $right = (new CDiv([
 			->addClass($data['theme'])
 			->setAttribute('data-csrf', $data['csrf'])
 			->setAttribute('data-paired', $data['devices'] ? '1' : '0')
+			->setAttribute('data-window', (string) $data['window'])
 			->setAttribute('data-api', $data['api_access'] ? '1' : '0')
 			->setAttribute('data-t', json_encode([
 				'repair' => Lang::t('repair_confirm_device',
-					'New code for "{name}"? That phone stops working until it scans the new code; other devices are not affected.'),
+					'New code for "{name}"? That phone keeps working until it scans the new code; other devices are not affected.'),
 				'remove' => Lang::t('remove_confirm',
 					'Remove "{name}"? That phone loses access; other devices are not affected.'),
 				'wait' => Lang::t('wait', 'Creating the code…'),
 				'copied' => Lang::t('copied', 'Copied'),
 				'hides' => Lang::t('hides_in', 'Hides in'),
+				'paired_ok' => Lang::t('paired_ok', 'Phone connected - the device is now listed.'),
+				'timed_out' => Lang::t('timed_out', 'Nobody scanned the code in time, so it was discarded. Add a device or tap New QR code for a new one.'),
 				'part' => Lang::t('part_label', 'Code {i} of {n} - keep the phone on it until the app has read all of them')
 			]))
 	)

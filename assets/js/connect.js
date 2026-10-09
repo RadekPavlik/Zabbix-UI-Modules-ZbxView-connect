@@ -4,13 +4,17 @@
  * paired as soon as the page opens; "Add another device" pairs one more,
  * "New QR code" re-pairs one device, the bin removes it
  * (zbxview.connect.create, mode=first|add|repair|remove).
- * The code is shown for HIDE_AFTER seconds, then taken off the screen.
+ * While the code is on screen the page asks every POLL_EVERY seconds whether
+ * a phone has used the token (mode=status); as soon as one has, the code
+ * goes and the device list reloads. After the pairing window (data-window
+ * seconds, same as the server's) - or "Hide now", or leaving the page - a
+ * code nobody used is dropped again (mode=discard).
  * A link with a client certificate comes as parts shown in turn.
  * QR drawing: qrcode.js (MIT, bundled).
  */
 (() => {
 	const $ = (id) => document.getElementById(id);
-	const HIDE_AFTER = 300;
+	const POLL_EVERY = 3;
 
 	function draw(text) {
 		const qr = qrcode(0, 'M');
@@ -28,15 +32,20 @@
 		}
 
 		const T = JSON.parse(root.dataset.t);
+		const HIDE_AFTER = parseInt(root.dataset.window, 10) || 300;
 		let link = '';
 		let rotate = null;
 		let countdown = null;
+		let poll = null;
+		// The token of the code on screen until a phone has used it.
+		let pending = null;
 
-		// One line for progress and errors; red only for errors.
-		const say = (text, is_error) => {
+		// One line for progress and errors; red for errors, green for success.
+		const say = (text, is_error, is_ok) => {
 			const el = $('zvc-error');
 			el.textContent = text;
 			el.classList.toggle('zvc-error-on', !!is_error);
+			el.classList.toggle('zvc-ok-on', !!is_ok);
 		};
 
 		function show(parts) {
@@ -64,7 +73,7 @@
 				$('zvc-timer-text').textContent = T.hides + ' ' + m + ':' + s;
 				$('zvc-bar').firstElementChild.style.width = (left / HIDE_AFTER * 100) + '%';
 				if (left-- <= 0) {
-					hide();
+					hide(T.timed_out);
 				}
 			};
 			$('zvc-timer').classList.remove('zvc-hidden');
@@ -72,15 +81,72 @@
 			countdown = setInterval(tick, 1000);
 		}
 
-		// The code is a credential: off the screen, then the page shows the devices.
-		function hide() {
+		// Did a phone use the token yet? Then the code has done its job.
+		function startPoll() {
+			clearInterval(poll);
+			poll = setInterval(() => {
+				if (pending === null) {
+					return;
+				}
+				const tokenid = pending;
+				call({mode: 'status', tokenid})
+					.then((r) => {
+						if (pending !== tokenid) {
+							return;
+						}
+						if (r.paired) {
+							pending = null;
+							stop();
+							say(T.paired_ok, false, true);
+							// The device list now has the phone on it.
+							setTimeout(() => location.reload(), 1200);
+						}
+						else if (r.gone) {
+							pending = null;
+							hide(T.timed_out);
+						}
+					})
+					.catch(() => {});
+			}, POLL_EVERY * 1000);
+		}
+
+		function stop() {
 			clearInterval(rotate);
 			clearInterval(countdown);
+			clearInterval(poll);
 			link = '';
 			$('zvc-qr').innerHTML = '';
 			$('zvc-open').removeAttribute('href');
-			location.reload();
+			$('zvc-timer').classList.add('zvc-hidden');
 		}
+
+		// The code is a credential: off the screen, and a token no phone has
+		// used yet is dropped on the server too.
+		function hide(message) {
+			stop();
+			if (pending !== null) {
+				call({mode: 'discard', tokenid: pending}).catch(() => {});
+				pending = null;
+			}
+			$('zvc-result').classList.add('zvc-hidden');
+			$('zvc-empty').classList.remove('zvc-hidden');
+			document.querySelectorAll('.zvc-dev').forEach((row) => row.classList.remove('is-current'));
+			say(message || '', false, false);
+		}
+
+		// Leaving the page (close, reload, back): the unused code goes with it.
+		window.addEventListener('pagehide', () => {
+			if (pending === null || typeof navigator.sendBeacon !== 'function') {
+				return;
+			}
+			const url = new Curl('zabbix.php');
+			url.setArgument('action', 'zbxview.connect.create');
+			navigator.sendBeacon(url.getUrl(), new Blob(
+				[JSON.stringify({_csrf_token: root.dataset.csrf, mode: 'discard', tokenid: pending})],
+				{type: 'application/json'}
+			));
+			pending = null;
+		});
 
 		function call(body) {
 			const url = new Curl('zabbix.php');
@@ -99,6 +165,10 @@
 		});
 
 		function pair(body) {
+			// One code at a time: a previous unused one is dropped first.
+			if (pending !== null) {
+				hide('');
+			}
 			busy(true);
 			say(T.wait, false);
 			call(body)
@@ -114,6 +184,7 @@
 					}
 					say('', false);
 					link = r.link;
+					pending = r.tokenid || null;
 					show(Array.isArray(r.parts) && r.parts.length ? r.parts : [r.link]);
 					$('zvc-open').href = r.link;
 					$('zvc-device').textContent = r.device || '';
@@ -124,6 +195,7 @@
 						row.classList.toggle('is-current', row.dataset.tokenid === String(body.tokenid || ''));
 					});
 					startTimer();
+					startPoll();
 				})
 				.catch((e) => say(String(e), true))
 				.finally(() => busy(false));
@@ -171,7 +243,7 @@
 			});
 		});
 
-		$('zvc-done').addEventListener('click', hide);
+		$('zvc-done').addEventListener('click', () => hide(''));
 
 		if (root.dataset.paired !== '1' && root.dataset.api === '1') {
 			pair({mode: 'first'});

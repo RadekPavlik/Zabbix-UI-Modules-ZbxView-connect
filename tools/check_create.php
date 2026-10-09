@@ -2,9 +2,11 @@
 // CLI only: the module directory is reachable through the web server.
 if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 // Runs the pairing flow of ConnectCreate against a live Zabbix, as the token's
-// user: first pairing, a reload (must NOT create a token), "Pair again" (new
-// token, old one deleted). Checks every link, then deletes what it created.
-// Touches only devices it creates itself; others (a real phone) stay as they are.
+// user: a code is pending until "the phone" uses its token (done here with a
+// user.get as that token), discard drops an unused one, a repair keeps the
+// old token until the new one is used. Checks every link, then deletes what
+// it created. Touches only devices it creates itself; others (a real phone)
+// stay as they are. (The 6-minute sweep of stale codes is not waited for.)
 //
 //     php tools/check_create.php https://zabbix/zabbix ~/.config/zabbix/token [config-url]
 class CWebUser {
@@ -52,9 +54,22 @@ use Modules\ZbxViewConnect\Includes\Pairing;
 
 $me = API::User()->checkAuthentication(['token' => $TOK]);
 CWebUser::$data['userid'] = $me['userid'];
-// Devices this test did not create (e.g. a real phone) must stay untouched.
+// Devices this test did not create (e.g. a real phone) must stay untouched -
+// after the sweep every page open does anyway (stale unused codes go).
+Pairing::settle($me['userid']);
 $before = Pairing::tokens($me['userid']);
 $foreign = array_column($before, 'tokenid');
+// "The phone scans the code": one API call as that token sets its lastaccess.
+$use = function (string $link) use ($BASE): bool {
+	$q = [];
+	parse_str(parse_url($link, PHP_URL_QUERY) ?? '', $q);
+	$ctx = stream_context_create(['http' => ['method' => 'POST',
+		'header' => "Content-Type: application/json-rpc\r\nAuthorization: Bearer ".$q['token'],
+		'content' => json_encode(['jsonrpc' => '2.0', 'method' => 'user.get', 'params' => ['output' => ['userid']], 'id' => 1])],
+		'ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]);
+	$out = json_decode(file_get_contents("$BASE/api_jsonrpc.php", false, $ctx), true);
+	return isset($out['result']);
+};
 
 $fail = 0;
 $ok = function (bool $c, string $m) use (&$fail) { echo ($c ? 'PASS  ' : 'FAIL  '), $m, "\n"; if (!$c) $fail++; };
@@ -80,6 +95,7 @@ $check = function (array $r) use ($ok, $CONFIG) {
 	}
 };
 $mine = fn() => array_values(array_filter(Pairing::devices($me['userid']), fn($d) => !in_array($d['tokenid'], $GLOBALS['foreign'], true)));
+$own = fn() => array_values(array_filter(Pairing::tokens($me['userid']), fn($t) => !in_array((string) $t['tokenid'], $GLOBALS['foreign'], true)));
 $GLOBALS['foreign'] = $foreign;
 $tag = 'claude-test-'.substr(md5((string) microtime(true)), 0, 5);
 
@@ -88,24 +104,61 @@ try {
 		$r = $run(['mode' => 'first']);
 		$ok(($r['paired'] ?? false) === true, 'mode=first with a device already paired creates nothing');
 	}
+	// A new code is pending: a token, but not a device yet.
+	$r = $run(['mode' => 'add', 'device' => $tag.' ~']);
+	$check($r);
+	$t = Pairing::token($me['userid'], $r['tokenid']);
+	$ok($t !== null && Pairing::isPending($t) && $mine() === [] && $r['device'] === $tag,
+		'add: the code is pending - a token (repair mark stripped from the name), no device listed');
+	$st = $run(['mode' => 'status', 'tokenid' => $r['tokenid']]);
+	$ok(($st['paired'] ?? null) === false, 'status: not paired while nobody used the token');
+	$d = $run(['mode' => 'discard', 'tokenid' => $r['tokenid']]);
+	$st = $run(['mode' => 'status', 'tokenid' => $r['tokenid']]);
+	$ok(($d['removed'] ?? false) === true && Pairing::token($me['userid'], $r['tokenid']) === null && ($st['gone'] ?? false) === true,
+		'discard: the unused token is gone, status says so');
+
+	// The phone scans: the token gets used, the device appears.
 	$r = $run(['mode' => 'add', 'device' => $tag]);
 	$check($r);
+	$ok($use($r['link']), 'the token from the link signs in');
+	$st = $run(['mode' => 'status', 'tokenid' => $r['tokenid']]);
 	$d = $mine();
-	$ok(count($d) === 1 && $d[0]['name'] === $tag && $r['device'] === $tag, 'add: device "'.$tag.'" created');
+	$ok(($st['paired'] ?? null) === true && count($d) === 1 && $d[0]['name'] === $tag && $d[0]['tokenid'] === $r['tokenid'],
+		'status after use: paired, device "'.$tag.'" listed');
+	$dd = $run(['mode' => 'discard', 'tokenid' => $r['tokenid']]);
+	$ok(($dd['removed'] ?? null) === false && count($mine()) === 1, 'discard of a used token does nothing');
+
 	$r2 = $run(['mode' => 'add', 'device' => $tag]);
+	$ok($use($r2['link']), 'second token signs in');
 	$d = $mine();
 	$ok(count($d) === 2 && in_array($tag.' (2)', array_column($d, 'name'), true), 'add with the same name: second device "'.$tag.' (2)"');
 	$first = array_values(array_filter($d, fn($x) => $x['name'] === $tag))[0];
 	$second = array_values(array_filter($d, fn($x) => $x['name'] !== $tag))[0];
 
-	sleep(1);
+	// Repair nobody scans: the device keeps its old token.
 	$r = $run(['mode' => 'repair', 'tokenid' => $first['tokenid']]);
 	$check($r);
+	$t = Pairing::token($me['userid'], $r['tokenid']);
 	$d = $mine();
-	$names = array_column($d, 'name');
-	$ok(count($d) === 2 && in_array($tag, $names, true) && !in_array($first['tokenid'], array_column($d, 'tokenid'), true)
-		&& in_array($second['tokenid'], array_column($d, 'tokenid'), true),
-		'repair: that device has a new token under the same name, the other device is untouched');
+	$ok($t !== null && Pairing::repairOf($t) === $tag && count($d) === 2
+		&& in_array($first['tokenid'], array_column($d, 'tokenid'), true),
+		'repair: the new token waits as "'.$tag.' ~", the old one still is the device');
+	$run(['mode' => 'discard', 'tokenid' => $r['tokenid']]);
+	$d = $mine();
+	$ok(count($d) === 2 && in_array($first['tokenid'], array_column($d, 'tokenid'), true) && Pairing::token($me['userid'], $r['tokenid']) === null,
+		'repair discarded: device as it was, the waiting token gone');
+
+	// Repair the phone scans: old token out, new one takes the name.
+	$r = $run(['mode' => 'repair', 'tokenid' => $first['tokenid']]);
+	$ok($use($r['link']), 'the repair token signs in');
+	$st = $run(['mode' => 'status', 'tokenid' => $r['tokenid']]);
+	$d = $mine();
+	$ids = array_column($d, 'tokenid');
+	$ok(($st['paired'] ?? null) === true && ($st['device'] ?? null) === $tag && count($d) === 2
+		&& in_array($tag, array_column($d, 'name'), true) && !in_array($first['tokenid'], $ids, true)
+		&& in_array($r['tokenid'], $ids, true) && in_array($second['tokenid'], $ids, true)
+		&& Pairing::token($me['userid'], $r['tokenid'])['name'] === Pairing::TOKEN_PREFIX.Pairing::DEVICE_SEPARATOR.$tag,
+		'repair used: that device has the new token under its name, the old token is gone, the other device is untouched');
 
 	$r = $run(['mode' => 'remove', 'tokenid' => $second['tokenid']]);
 	$d = $mine();
@@ -115,7 +168,7 @@ try {
 	$ok(isset($r['error']), 'remove of a token that is not one of the user\'s devices is refused');
 }
 finally {
-	$left = array_column($mine(), 'tokenid');
+	$left = array_column($own(), 'tokenid');
 	if ($left) { API::Token()->delete($left); }
 	$after = array_column(Pairing::tokens($me['userid']), 'tokenid');
 	sort($after); $f = $foreign; sort($f);

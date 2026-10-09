@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.5.0 — 2026-10-09
+
+- **A code nobody scans is dropped again.** The token behind a QR code is
+  kept only once a phone has used it (its `lastaccess`). The page asks the
+  server every 3 s; when the phone signs in, the code disappears at once with
+  "Phone connected" and the device list reloads. After the 5-minute window,
+  on *Hide now*, or when the page is left, an unused token is deleted
+  (`mode=discard`, sent as a beacon on leaving); a stale one is swept on the
+  next open of the page or any pairing call (`Pairing::settle()`, window +
+  60 s slack). Devices are only listed once paired.
+- **New QR code keeps the old token working** until the phone has scanned
+  the new one (the new token waits as "<device> ~"; `settle()` then deletes
+  the old token and gives the new one the device's name). If nobody scans,
+  the device stays as it was.
+- Note: tokens of earlier versions that no phone ever used (`lastaccess` 0)
+  are dropped on the first open as well.
+- `tools/check_create.php` covers pending → discard, pairing by using the
+  token, and the deferred repair.
+
 ## 1.4.0 — 2026-10-08
 
 - **Several phones per user.** *Mobile connect* lists the user's devices
@@ -69,8 +88,9 @@
   module checks the certificate at the address; when this server does not
   trust it, the code carries `pin=<SHA-256 of the certificate DER>`, the value
   the app stores as its certificate pin. `1` always pins, `0` never.
-- Empty keys in the saved Zabbix config fall back to manifest.json, so a
-  module registered by 1.0.x picks up new defaults.
+- Globus defaults in manifest.json: `https://zabbix-app.globus.cz`,
+  `S4000ZABBIXKOO`, `self_signed=0`. Empty keys in the saved Zabbix config fall
+  back to manifest.json, so a module registered by 1.0.x picks them up.
 - **Client certificate (mTLS) in the code**: one shared EC certificate set by
   an admin (`tools/set_client_cert.php`, config `client_cert*`) travels with
   the token. The link is then split into 3 QR codes shown in turn; the app

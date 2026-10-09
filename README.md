@@ -37,7 +37,13 @@ module.create  {"id": "zbxviewconnect", "relative_path": "modules/Zabbix-UI-Modu
   **New QR code** (that phone scans again, others are not affected) and
   **Remove** (that phone loses access). **Add another device** pairs one more
   phone or tablet, with an optional name.
-- The code hides itself after 5 minutes (or with *Hide now*).
+- The code hides itself after 5 minutes (or with *Hide now*). While it is on
+  screen the page watches for the phone; as soon as the app has signed in
+  with the token the code goes and the device appears in the list. A code
+  nobody scanned in time is **dropped again** (also when the page is closed
+  or on the next open), so a device is only ever listed once a phone really
+  paired. *New QR code* keeps the old token working until the phone has
+  scanned the new one.
 
 ## Configuration (admin, once)
 

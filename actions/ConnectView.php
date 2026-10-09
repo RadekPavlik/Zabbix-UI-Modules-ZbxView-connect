@@ -14,7 +14,9 @@ use Modules\ZbxViewConnect\Includes\Ui;
 /**
  * The "Mobile connect" page: the user's paired devices (each with its own
  * token) - new code or remove per device, "Add another device". With no
- * device yet, connect.js pairs the first one right away.
+ * device yet, connect.js pairs the first one right away. Before listing,
+ * Pairing::settle() finishes repairs a phone completed and drops codes
+ * nobody scanned, so only devices a phone really uses are shown.
  */
 class ConnectView extends CController {
 
@@ -33,8 +35,11 @@ class ConnectView extends CController {
 	protected function doAction(): void {
 		$server = Pairing::server(false);
 		$devices = [];
+		$legacy = Lang::t('device_default', 'Phone');
 
-		foreach (Pairing::devices((string) CWebUser::$data['userid'], Lang::t('device_default', 'Phone')) as $d) {
+		Pairing::settle((string) CWebUser::$data['userid'], $legacy);
+
+		foreach (Pairing::devices((string) CWebUser::$data['userid'], $legacy) as $d) {
 			$devices[] = $d + [
 				'created_text' => zbx_date2str(DATE_TIME_FORMAT, $d['created']),
 				'lastaccess_text' => $d['lastaccess'] > 0
@@ -52,6 +57,8 @@ class ConnectView extends CController {
 			// A token is useless to the app when the role may not use the API.
 			'api_access' => CWebUser::checkAccess('api.access'),
 			'devices' => $devices,
+			// Seconds a code is shown and waits for its phone (connect.js).
+			'window' => Pairing::PAIR_WINDOW,
 			'csrf' => CCsrfTokenHelper::get('zbxview.connect.create')
 		]));
 	}

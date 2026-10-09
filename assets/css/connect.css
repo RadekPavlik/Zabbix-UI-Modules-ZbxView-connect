@@ -177,6 +177,7 @@
 .zvc-msg { font-size: 13px; color: var(--zvc-muted); }
 .zvc-msg:empty { display: none; }
 .zvc-error-on { color: var(--zvc-err); font-weight: 600; }
+.zvc-ok-on { color: var(--zvc-ok); font-weight: 600; }
 
 /* ---------------------------------------------------------------- facts / boxes */
 .zvc-facts { display: grid; grid-template-columns: auto 1fr; margin-top: 18px; }

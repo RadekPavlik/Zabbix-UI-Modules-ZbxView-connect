@@ -6,14 +6,24 @@ use API;
 use APP;
 
 /**
- * One pairing per user: the API token named "ZbxView <date time>" that the
- * app signs in with. It never expires; pairing again replaces it.
+ * One API token per phone ("ZbxView · <device>") that the app signs in
+ * with. It never expires once a phone has used it; a code nobody scanned
+ * within the pairing window is dropped again (see settle()).
  * Server address, name and the self-signed flag come from the module
  * config (manifest "config", changeable by an admin), never from the user.
  */
 class Pairing {
 
 	public const TOKEN_PREFIX = 'ZbxView ';
+
+	/** Seconds a new code waits for its phone; the page hides it then. */
+	public const PAIR_WINDOW = 300;
+
+	/** settle() drops unused tokens this much older than the window. */
+	private const SWEEP_SLACK = 60;
+
+	/** Marks the new token of a re-paired device until its old one is gone. */
+	public const REPAIR_MARK = ' ~';
 
 	/**
 	 * The user's ZbxView tokens, newest first.
@@ -39,13 +49,55 @@ class Pairing {
 	public const DEVICE_SEPARATOR = '· ';
 
 	/**
-	 * The user's paired devices (one ZbxView token each), newest first:
-	 * tokenid, name (device), created, lastaccess (unix), active.
+	 * One of the user's ZbxView tokens by id, or null.
+	 */
+	public static function token(string $userid, string $tokenid): ?array {
+		foreach (self::tokens($userid) as $token) {
+			if ((string) $token['tokenid'] === $tokenid) {
+				return $token;
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * A token no phone has used yet - a code still waiting to be scanned.
+	 */
+	public static function isPending(array $token): bool {
+		return (int) $token['lastaccess'] === 0;
+	}
+
+	/**
+	 * The device a repair token stands in for ("<device> ~", "<device> ~ (2)"),
+	 * or null for an ordinary token.
+	 */
+	public static function repairOf(array $token): ?string {
+		$rest = substr((string) $token['name'], strlen(self::TOKEN_PREFIX.self::DEVICE_SEPARATOR));
+
+		return strpos((string) $token['name'], self::TOKEN_PREFIX.self::DEVICE_SEPARATOR) === 0
+				&& preg_match('/^(.+)'.preg_quote(self::REPAIR_MARK, '/').'(?: \(\d+\))?$/', $rest, $m)
+			? $m[1]
+			: null;
+	}
+
+	/**
+	 * The user's paired devices (one ZbxView token each that a phone has
+	 * used), newest first: tokenid, name (device), created, lastaccess (unix),
+	 * active. Codes still waiting to be scanned are not devices.
 	 */
 	public static function devices(string $userid, string $legacy_label = 'Phone'): array {
+		return self::devicesOf(self::tokens($userid), $legacy_label);
+	}
+
+	private static function devicesOf(array $tokens, string $legacy_label): array {
 		$devices = [];
 
-		foreach (self::tokens($userid) as $token) {
+		foreach ($tokens as $token) {
+			if (self::isPending($token) || self::repairOf($token) !== null) {
+				continue;
+			}
+
 			$rest = substr((string) $token['name'], strlen(self::TOKEN_PREFIX));
 			$name = strpos($rest, self::DEVICE_SEPARATOR) === 0
 				? substr($rest, strlen(self::DEVICE_SEPARATOR))
@@ -65,13 +117,64 @@ class Pairing {
 	}
 
 	/**
-	 * A token name for $device that no token of the user has yet.
+	 * What the phones did since the page last looked:
+	 * - a repair token a phone has used replaces the old token of its device
+	 *   (old one deleted, new one takes the device's name);
+	 * - codes nobody scanned within the window (plus a little slack for a scan
+	 *   at the last second) are dropped, so an unpaired device never lingers.
+	 * Returns ['paired' => [tokenid => device], 'dropped' => [tokenid, ...]].
 	 */
-	public static function tokenName(string $userid, string $device): string {
+	public static function settle(string $userid, string $legacy_label = 'Phone'): array {
+		$tokens = self::tokens($userid);
+		$deadline = time() - self::PAIR_WINDOW - self::SWEEP_SLACK;
+		$dropped = [];
+
+		foreach ($tokens as $token) {
+			if (self::isPending($token) && (int) $token['created_at'] < $deadline) {
+				$dropped[] = (string) $token['tokenid'];
+			}
+		}
+
+		if ($dropped) {
+			API::Token()->delete($dropped);
+			$tokens = array_values(array_filter($tokens,
+				static fn($t) => !in_array((string) $t['tokenid'], $dropped, true)
+			));
+		}
+
+		$paired = [];
+		$devices = self::devicesOf($tokens, $legacy_label);
+
+		foreach ($tokens as $token) {
+			$device = self::repairOf($token);
+
+			if ($device === null || self::isPending($token)) {
+				continue;
+			}
+
+			// The phone scanned the new code: only now its old token goes.
+			foreach ($devices as $d) {
+				if ($d['name'] === $device && $d['tokenid'] !== (string) $token['tokenid']) {
+					API::Token()->delete([$d['tokenid']]);
+				}
+			}
+
+			API::Token()->update(['tokenid' => $token['tokenid'], 'name' => self::tokenName($userid, $device)]);
+			$paired[(string) $token['tokenid']] = $device;
+		}
+
+		return ['paired' => $paired, 'dropped' => $dropped];
+	}
+
+	/**
+	 * A token name for $device that no token of the user has yet; $mark is
+	 * kept whole when the device name has to be cut.
+	 */
+	public static function tokenName(string $userid, string $device, string $mark = ''): string {
 		$device = trim(preg_replace('/\s+/', ' ', $device));
 		$taken = array_column(self::tokens($userid), 'name');
 		// Zabbix token names are at most 64 characters.
-		$base = self::TOKEN_PREFIX.self::DEVICE_SEPARATOR.mb_substr($device, 0, 48);
+		$base = self::TOKEN_PREFIX.self::DEVICE_SEPARATOR.mb_substr($device, 0, 48 - mb_strlen($mark)).$mark;
 		$name = $base;
 
 		for ($i = 2; in_array($name, $taken, true); $i++) {
