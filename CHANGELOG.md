@@ -19,6 +19,7 @@
 - `tools/check_create.php` covers pending → discard, pairing by using the
   token, and the deferred repair.
 
+
 ## 1.4.0 — 2026-10-08
 
 - **Several phones per user.** *Mobile connect* lists the user's devices
@@ -88,9 +89,8 @@
   module checks the certificate at the address; when this server does not
   trust it, the code carries `pin=<SHA-256 of the certificate DER>`, the value
   the app stores as its certificate pin. `1` always pins, `0` never.
-- Globus defaults in manifest.json: `https://zabbix-app.globus.cz`,
-  `S4000ZABBIXKOO`, `self_signed=0`. Empty keys in the saved Zabbix config fall
-  back to manifest.json, so a module registered by 1.0.x picks them up.
+- Empty keys in the saved Zabbix config fall back to manifest.json, so a
+  module registered by 1.0.x picks up new defaults.
 - **Client certificate (mTLS) in the code**: one shared EC certificate set by
   an admin (`tools/set_client_cert.php`, config `client_cert*`) travels with
   the token. The link is then split into 3 QR codes shown in turn; the app
