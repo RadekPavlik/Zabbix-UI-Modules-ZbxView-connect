@@ -74,6 +74,21 @@ try {
 	$r = $run(['action' => 'save', 'url' => 'ftp://x', 'name' => '', 'server_cert' => '0', 'cert_required' => '0', 'hosts' => '']);
 	$ok(isset($r['error']) && $live()['url'] === 'https://zabbix.example.com', 'bad address refused, config untouched');
 
+	// The Firebase project (push): all four or none, roughly shaped right.
+	$push = ['push_api_key' => 'AIzaSyTestKey_0123456789abcdef', 'push_app_id' => '1:123456789012:android:0123456789abcdef',
+		'push_sender_id' => '123456789012', 'push_project_id' => 'test-project'];
+	$base = ['action' => 'save', 'url' => 'https://zabbix.example.com', 'name' => 'Test', 'server_cert' => '0', 'cert_required' => '0', 'hosts' => ''];
+	$r = $run($base + $push);
+	$c = $live();
+	$ok(($r['ok'] ?? false) && ($c['push_project_id'] ?? '') === 'test-project' && ($c['push_app_id'] ?? '') === $push['push_app_id'],
+		'push: the Firebase project is stored');
+	$r = $run($base + ['push_api_key' => 'x']);
+	$ok(isset($r['error']) && $live()['push_project_id'] === 'test-project', 'push: one value alone is refused, config untouched');
+	$r = $run($base + ['push_app_id' => '1:1:ios:a'] + $push);
+	$ok(isset($r['error']), 'push: an iOS app id is refused');
+	$r = $run($base);
+	$ok(($r['ok'] ?? false) && ($live()['push_project_id'] ?? '') === '', 'push: all empty clears the project');
+
 	$r = $run(['action' => 'check', 'cert' => $cert($pem), 'cert_name' => 'client.pem', 'password' => '', 'hosts' => 'a.example.com']);
 	$ok(($r['ok'] ?? false) && $r['cert']['curve'] === 'P-256' && $r['cert']['file'] === 'client.pem'
 		&& $r['preview']['ck_len'] > 0 && !isset($r['preview']['ck']) && ($live()['client_cert'] ?? '') === '',
