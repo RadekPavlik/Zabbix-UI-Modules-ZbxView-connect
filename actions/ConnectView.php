@@ -54,6 +54,7 @@ class ConnectView extends CController {
 			'user' => getUserFullname(CWebUser::$data),
 			'server_url' => $server['url'],
 			'server_name' => $server['name'],
+			'push' => $server['push'] !== null,
 			// A token is useless to the app when the role may not use the API.
 			'api_access' => CWebUser::checkAccess('api.access'),
 			'devices' => $devices,

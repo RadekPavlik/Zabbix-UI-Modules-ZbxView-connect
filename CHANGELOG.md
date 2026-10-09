@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.6.0 — 2026-10-09
+
+- **Push notifications through the organisation's own Firebase project.**
+  *Mobile configuration* has a third card: the Android client values of the
+  project's google-services.json (project ID, sender ID, app ID, API key) -
+  typed or loaded from the file (the client `app.zbxview` is picked). The
+  code then carries them as `fk`/`fa`/`fs`/`fp` and the app (0.50+) turns
+  push on right after the scan. All four or none; the preview and the user
+  page say whether a code carries them. The relay, the media type and the
+  action are described at https://radekpavlik.github.io/zbxview/#push.
+- `tools/check_create.php` checks the Firebase values in the link.
+
+
 ## 1.5.0 — 2026-10-09
 
 - **A code nobody scans is dropped again.** The token behind a QR code is

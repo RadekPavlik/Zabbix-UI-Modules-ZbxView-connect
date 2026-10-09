@@ -37,7 +37,11 @@ class SettingsUpdate extends CController {
 			'cert' => 'string',
 			'cert_name' => 'string',
 			'password' => 'string',
-			'hosts' => 'string'
+			'hosts' => 'string',
+			'push_api_key' => 'string',
+			'push_app_id' => 'string',
+			'push_sender_id' => 'string',
+			'push_project_id' => 'string'
 		]);
 
 		if (!$ret) {
@@ -96,9 +100,28 @@ class SettingsUpdate extends CController {
 			}
 		}
 
+		// The Firebase project for push notifications: all four or none.
+		$push = [];
+
+		foreach (array_keys(Pairing::PUSH_KEYS) as $key) {
+			$push[$key] = trim((string) $this->getInput($key, ''));
+		}
+
+		$push_error = Pairing::pushError($push);
+
+		if ($push_error !== null) {
+			$this->respond(['error' => $push_error === 'incomplete'
+				? Lang::t('err_push_incomplete', 'Fill in all four Firebase values or none.')
+				: Lang::t('err_push_format',
+					'The Firebase values do not look right (app ID 1:<number>:android:<hex>, sender ID digits only).')]);
+
+			return;
+		}
+
 		$config['url'] = $url;
 		$config['name'] = trim((string) $this->getInput('name', ''));
 		$config['self_signed'] = (string) $this->getInput('server_cert', '0');
+		$config = $push + $config;
 
 		if ((string) $this->getInput('cert_required', '0') === '0') {
 			$config['client_cert'] = $config['client_cert_password'] = $config['client_cert_hosts'] = '';

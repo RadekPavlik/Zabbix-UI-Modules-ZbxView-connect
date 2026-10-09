@@ -231,8 +231,67 @@ class Pairing {
 			// SHA-256 of the certificate DER, lower-case hex - the same value the
 			// app stores as its certificate pin, so it trusts exactly this
 			// certificate from the first request on.
-			'pin' => $pin
+			'pin' => $pin,
+			// The organisation's own Firebase project for push notifications
+			// (null = none configured).
+			'push' => self::push($config)
 		];
+	}
+
+	/** Module config keys of the Firebase project, in the order the code carries them (fk, fa, fs, fp). */
+	public const PUSH_KEYS = ['push_api_key' => 'fk', 'push_app_id' => 'fa', 'push_sender_id' => 'fs',
+		'push_project_id' => 'fp'];
+
+	/**
+	 * The Firebase project the code hands to the app, as its query
+	 * parameters: ['fk' => API key, 'fa' => app id, 'fs' => sender id,
+	 * 'fp' => project id] - the Android client values of the organisation's
+	 * google-services.json. Null unless all four are set.
+	 */
+	public static function push(array $config): ?array {
+		$push = [];
+
+		foreach (self::PUSH_KEYS as $key => $param) {
+			$value = trim((string) ($config[$key] ?? ''));
+
+			if ($value === '') {
+				return null;
+			}
+
+			$push[$param] = $value;
+		}
+
+		return $push;
+	}
+
+	/**
+	 * Why $values (module config keys) are not a usable Firebase project:
+	 * 'incomplete' (some but not all set), 'format', or null when they are
+	 * fine - or all empty, which means no push.
+	 */
+	public static function pushError(array $values): ?string {
+		$set = 0;
+
+		foreach (array_keys(self::PUSH_KEYS) as $key) {
+			if (trim((string) ($values[$key] ?? '')) !== '') {
+				$set++;
+			}
+		}
+
+		if ($set === 0) {
+			return null;
+		}
+
+		if ($set !== count(self::PUSH_KEYS)) {
+			return 'incomplete';
+		}
+
+		$ok = preg_match('/^[A-Za-z0-9_-]{20,}$/', trim((string) $values['push_api_key']))
+			&& preg_match('/^1:\d+:android:[0-9a-f]+$/i', trim((string) $values['push_app_id']))
+			&& preg_match('/^\d+$/', trim((string) $values['push_sender_id']))
+			&& preg_match('/^[a-z0-9][a-z0-9-]*$/', trim((string) $values['push_project_id']));
+
+		return $ok ? null : 'format';
 	}
 
 	/**
@@ -452,6 +511,7 @@ class Pairing {
 			'token' => $token,
 			'self_signed' => $server['self_signed'] ? '1' : '0'
 		] + (($server['pin'] ?? '') !== '' ? ['pin' => $server['pin']] : [])
+		+ (($server['push'] ?? null) !== null ? $server['push'] : [])
 		+ ($cert && !isset($cert['error']) ? array_filter([
 			'cc' => $cert['cc'],
 			'ck' => $cert['ck'],

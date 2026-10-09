@@ -23,7 +23,7 @@ $src = file_get_contents("$M/views/connect.view.php");
 $src = str_replace(['(new CHtmlPage())', 'declare(strict_types = 0);'], ['(new _Page())', ''], $src);
 $data = ['title' => Modules\ZbxViewConnect\Includes\Lang::t('title', 'Mobile connect'),
 	'theme' => 'zvc-theme-light', 'user' => 'Test User', 'server_url' => 'https://zabbix.example.com/zabbix',
-	'server_name' => 'Test Zabbix', 'api_access' => true, 'csrf' => 'x',
+	'server_name' => 'Test Zabbix', 'api_access' => true, 'csrf' => 'x', 'push' => true,
 	'window' => Modules\ZbxViewConnect\Includes\Pairing::PAIR_WINDOW,
 	'devices' => ($argv[2] ?? '0') === '1'
 		? [['tokenid' => '1', 'name' => 'Work phone', 'created' => 0, 'lastaccess' => 0, 'active' => true,

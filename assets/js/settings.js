@@ -127,6 +127,52 @@
 			reader.readAsDataURL(f);
 		});
 
+		// --- Firebase project (push) -----------------------------------------
+		const PUSH = {'zvc-s-push-api-key': 'push_api_key', 'zvc-s-push-app-id': 'push_app_id',
+			'zvc-s-push-sender-id': 'push_sender_id', 'zvc-s-push-project-id': 'push_project_id'};
+		const pushValues = () => {
+			const v = {};
+			for (const id in PUSH) {
+				v[PUSH[id]] = $(id).value.trim();
+			}
+			return v;
+		};
+		const pushComplete = () => Object.values(pushValues()).every((x) => x !== '');
+
+		// google-services.json: the Android client of the app (app.zbxview when
+		// several are registered) fills the four fields.
+		$('zvc-s-push-pick').addEventListener('click', () => $('zvc-s-push-file').click());
+		$('zvc-s-push-file').addEventListener('change', () => {
+			const f = $('zvc-s-push-file').files[0];
+			if (!f) {
+				return;
+			}
+			const reader = new FileReader();
+			reader.onload = () => {
+				try {
+					const d = JSON.parse(String(reader.result));
+					const clients = Array.isArray(d.client) ? d.client : [];
+					const c = clients.find((x) => ((x.client_info || {}).android_client_info || {}).package_name === 'app.zbxview')
+						|| clients.find((x) => (x.client_info || {}).mobilesdk_app_id) || null;
+					const info = d.project_info || {};
+					if (c === null || !info.project_number || !info.project_id) {
+						throw new Error('not a google-services.json');
+					}
+					$('zvc-s-push-project-id').value = info.project_id;
+					$('zvc-s-push-sender-id').value = info.project_number;
+					$('zvc-s-push-app-id').value = c.client_info.mobilesdk_app_id || '';
+					$('zvc-s-push-api-key').value = ((c.api_key || [])[0] || {}).current_key || '';
+					say('zvc-s-push-msg', T.push_loaded.replace('{file}', f.name), false);
+					draw();
+				}
+				catch (e) {
+					say('zvc-s-push-msg', T.push_bad_file, true);
+				}
+				$('zvc-s-push-file').value = '';
+			};
+			reader.readAsText(f);
+		});
+
 		function post(body) {
 			const url = new Curl('zabbix.php');
 			url.setArgument('action', 'zbxview.connect.settings.update');
@@ -181,7 +227,7 @@
 				server_cert: serverCert(),
 				cert_required: required.checked ? '1' : '0',
 				hosts: hostList()
-			}, required.checked ? certBody() : {}))
+			}, pushValues(), required.checked ? certBody() : {}))
 				.then((r) => {
 					if (r.error !== undefined || !r.ok) {
 						say('zvc-s-msg', r.error || 'Error', true);
@@ -205,6 +251,11 @@
 			const name = $('zvc-s-name').value.trim() || root.dataset.nameAuto;
 			let link = 'zbxview://add?url=' + enc(url) + '&name=' + enc(name) + '&auth=token&token='
 				+ 'preview'.padEnd(64, '0') + '&self_signed=' + serverCert();
+			if (pushComplete()) {
+				const v = pushValues();
+				link += '&fk=' + enc(v.push_api_key) + '&fa=' + enc(v.push_app_id)
+					+ '&fs=' + enc(v.push_sender_id) + '&fp=' + enc(v.push_project_id);
+			}
 			if (required.checked && preview.cc) {
 				link += '&cc=' + preview.cc + '&ck=' + 'A'.repeat(preview.ck_len);
 				const ch = hosts.join(',');
@@ -266,9 +317,10 @@
 			$('zvc-p-sc').textContent = serverCert() === '1' ? T.self : T.public;
 			const n = hosts.length || 1;
 			$('zvc-p-cc').textContent = required.checked && preview.cc ? T.yes_hosts.replace('{n}', n) : T.no;
+			$('zvc-p-push').textContent = pushComplete() ? T.push_yes.replace('{p}', pushValues().push_project_id) : T.no;
 		}
 
-		['zvc-s-url', 'zvc-s-name'].forEach((id) => $(id).addEventListener('input', draw));
+		['zvc-s-url', 'zvc-s-name'].concat(Object.keys(PUSH)).forEach((id) => $(id).addEventListener('input', draw));
 		renderChips();
 		draw();
 	}

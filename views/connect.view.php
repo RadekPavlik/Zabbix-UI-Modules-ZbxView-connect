@@ -70,7 +70,9 @@ $result = (new CDiv([
 			(new CDiv([new CTag('small', true, Lang::t('device', 'Device')), (new CTag('b', true, ''))->setId('zvc-device')])),
 			(new CDiv([new CTag('small', true, Lang::t('server', 'Server')), new CTag('b', true, $data['server_name'])])),
 			(new CDiv([new CTag('small', true, Lang::t('token', 'Token')), (new CTag('b', true, ''))->setId('zvc-token-name')->addClass('zvc-mono')])),
-			(new CDiv([new CTag('small', true, Lang::t('expires', 'Expires')), new CTag('b', true, Lang::t('never_once_used', 'Never, once the phone has used it'))]))
+			(new CDiv([new CTag('small', true, Lang::t('expires', 'Expires')), new CTag('b', true, Lang::t('never_once_used', 'Never, once the phone has used it'))])),
+			(new CDiv([new CTag('small', true, Lang::t('s_push_short', 'Push notifications')),
+				new CTag('b', true, $data['push'] ? Lang::t('push_in_code', 'In the code - the phone turns them on after the scan') : Lang::t('no', 'No'))]))
 		]))->addClass('zvc-stack')
 	]))->addClass('zvc-qr-row'),
 	(new CDiv([Ui::icon('warn'), new CSpan(Lang::t('secret_warn',

@@ -122,6 +122,36 @@ $certificate = (new CDiv([
 	]))->setId('zvc-s-cert-body')->addClass('zvc-card-body')->addClass($cert['set'] ? null : 'zvc-off')
 ]))->addClass('zvc-card');
 
+// --- 3: the organisation's Firebase project (push notifications) ---------
+$push_card = (new CDiv([
+	$head('3', Lang::t('s_push_title', 'Push notifications (Firebase)'),
+		Lang::t('s_push_sub', 'Your own Firebase project: the code hands it to the app and phones get problems as notifications. Zabbix needs the relay and the "ZbxView Push" media type - see the guide.')),
+	(new CDiv([
+		(new CDiv([
+			$field(Lang::t('s_push_project_id', 'Project ID'), $input('zvc-s-push-project-id', $data['push']['project_id'], 'my-zabbix')),
+			$field(Lang::t('s_push_sender_id', 'Sender ID'), $input('zvc-s-push-sender-id', $data['push']['sender_id'], '123456789012'))
+		]))->addClass('zvc-row'),
+		(new CDiv([
+			$field(Lang::t('s_push_app_id', 'App ID'), $input('zvc-s-push-app-id', $data['push']['app_id'], '1:123456789012:android:0123456789abcdef')),
+			$field(Lang::t('s_push_api_key', 'API key'), $input('zvc-s-push-api-key', $data['push']['api_key'], 'AIza…'))
+		]))->addClass('zvc-row'),
+		(new CDiv([
+			(new CSimpleButton([Ui::icon('file'), Lang::t('s_push_load', 'Load google-services.json')]))
+				->setId('zvc-s-push-pick')->addClass('zvc-btn')->addClass('zvc-btn-alt'),
+			(new CTag('input', false))->setAttribute('type', 'file')->setId('zvc-s-push-file')->addClass('zvc-hidden')
+				->setAttribute('accept', '.json,application/json'),
+			(new CLink([Ui::icon('external'), Lang::t('s_push_guide', 'Setup guide (relay, media type, action)')],
+				'https://radekpavlik.github.io/zbxview/#push'))
+				->setAttribute('target', '_blank')->setAttribute('rel', 'noopener')
+				->addClass('zvc-btn')->addClass('zvc-btn-alt'),
+			(new CSpan())->setId('zvc-s-push-msg')->addClass('zvc-msg')
+		]))->addClass('zvc-actions'),
+		(new CDiv(Lang::t('s_push_hint',
+			'All four values are in google-services.json of the Android app "app.zbxview" registered in your Firebase project - load the file and they fill in. Leave everything empty for no push. Android only; the phone turns push on right after the scan.')))
+			->addClass('zvc-hint')
+	]))->addClass('zvc-card-body')
+]))->addClass('zvc-card');
+
 $footer = (new CDiv([
 	(new CSimpleButton(Lang::t('save', 'Save')))->setId('zvc-s-save')->addClass('zvc-btn'),
 	(new CSimpleButton(Lang::t('s_discard', 'Discard changes')))->setId('zvc-s-discard')
@@ -152,7 +182,8 @@ $preview = (new CDiv([
 			$fact(Lang::t('server', 'Server'), '', 'zvc-p-url'),
 			$fact(Lang::t('name', 'Name'), '', 'zvc-p-name'),
 			$fact(Lang::t('s_cert_server', 'Server certificate'), '', 'zvc-p-sc'),
-			$fact(Lang::t('s_cc_short', 'Client certificate'), '', 'zvc-p-cc')
+			$fact(Lang::t('s_cc_short', 'Client certificate'), '', 'zvc-p-cc'),
+			$fact(Lang::t('s_push_short', 'Push notifications'), '', 'zvc-p-push')
 		)))->addClass('zvc-facts'),
 		(new CLink([Ui::icon('external'), Lang::t('s_open_user', 'Open the page users see')],
 			(new CUrl('zabbix.php'))->setArgument('action', 'zbxview.connect')->getUrl()))
@@ -168,7 +199,7 @@ $preview = (new CDiv([
 	->addItem(
 		(new CDiv([
 			(new CDiv([
-				(new CDiv([$connection, $certificate, $footer]))->addClass('zvc-col'),
+				(new CDiv([$connection, $certificate, $push_card, $footer]))->addClass('zvc-col'),
 				$preview
 			]))->addClass('zvc-grid')
 		]))
@@ -189,6 +220,9 @@ $preview = (new CDiv([
 				'self' => Lang::t('ss_self', 'Self-signed'),
 				'yes_hosts' => Lang::t('s_yes_hosts', 'Yes · {n} host(s)'),
 				'no' => Lang::t('no', 'No'),
+				'push_yes' => Lang::t('s_push_yes', 'Yes · {p}'),
+				'push_loaded' => Lang::t('s_push_loaded', 'Loaded from {file}.'),
+				'push_bad_file' => Lang::t('s_push_bad_file', 'This is not a google-services.json with an Android app.'),
 				'part1' => Lang::t('s_part1', 'Code 1 - connection and sign-in'),
 				'partn' => Lang::t('s_partn', 'Code {i} - client certificate'),
 				'single' => Lang::t('s_single', 'One code - connection and sign-in'),

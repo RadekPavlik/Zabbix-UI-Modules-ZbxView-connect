@@ -45,6 +45,12 @@ module.create  {"id": "zbxviewconnect", "relative_path": "modules/Zabbix-UI-Modu
   paired. *New QR code* keeps the old token working until the phone has
   scanned the new one.
 
+- **Push notifications** (optional): the admin enters the organisation's own
+  Firebase project (the Android client of google-services.json) in *Mobile
+  configuration*; the code hands it to the app and the phone turns push on
+  after the scan. Zabbix side: the relay + "ZbxView Push" media type + action,
+  see https://radekpavlik.github.io/zbxview/#push.
+
 ## Configuration (admin, once)
 
 Module `config` (manifest defaults, changeable with `module.update`; a key

@@ -42,7 +42,10 @@ $TOK = trim(file_get_contents($argv[2]));
 $CONFIG = ['url' => $argv[3] ?? $BASE, 'name' => 'Test Zabbix', 'self_signed' => 'auto',
 	// ZVC_CLIENT_CERT=<PEM file with cert+key> tests the certificate + parts path.
 	'client_cert' => getenv('ZVC_CLIENT_CERT') ? file_get_contents(getenv('ZVC_CLIENT_CERT')) : '',
-	'client_cert_hosts' => getenv('ZVC_CLIENT_CERT') ? 'zabbix-app.example.com' : ''];
+	'client_cert_hosts' => getenv('ZVC_CLIENT_CERT') ? 'zabbix-app.example.com' : '',
+	// A Firebase project (push): the link must carry it as fk/fa/fs/fp.
+	'push_api_key' => 'AIzaSyTestKey_0123456789abcdef', 'push_app_id' => '1:123456789012:android:0123456789abcdef',
+	'push_sender_id' => '123456789012', 'push_project_id' => 'test-project'];
 require_once __DIR__.'/boot_common.php';
 if (!function_exists('_x')) { function _x($s, $c) { return $s; } }
 require_once '/usr/share/zabbix/include/translateDefines.inc.php';
@@ -85,6 +88,9 @@ $check = function (array $r) use ($ok, $CONFIG) {
 	$ok(str_starts_with($r['link'] ?? '', 'zbxview://add?') && $q['url'] === rtrim($CONFIG['url'], '/')
 		&& $q['name'] === 'Test Zabbix' && $q['auth'] === 'token' && strlen($q['token'] ?? '') === 64
 		&& str_ends_with($q['token'], $r['tail']), 'link carries url, name and the new token');
+	$ok(($q['fk'] ?? '') === $CONFIG['push_api_key'] && ($q['fa'] ?? '') === $CONFIG['push_app_id']
+		&& ($q['fs'] ?? '') === $CONFIG['push_sender_id'] && ($q['fp'] ?? '') === $CONFIG['push_project_id'],
+		'link carries the Firebase project (fk/fa/fs/fp)');
 	$parts = $r['parts'] ?? [];
 	$joined = implode('', array_map(fn($p) => preg_replace('/^ZBXV1:[a-z0-9]+:\d+\/\d+:/', '', $p), $parts));
 	if ($CONFIG['client_cert'] !== '') {

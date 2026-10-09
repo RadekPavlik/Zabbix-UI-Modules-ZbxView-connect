@@ -49,6 +49,13 @@ class SettingsView extends CController {
 			'cert_file' => (string) ($config['client_cert_name'] ?? ''),
 			'cert_hosts' => (string) ($config['client_cert_hosts'] ?? ''),
 			'preview' => self::preview($cert),
+			// The Firebase project (push notifications), field by field.
+			'push' => [
+				'api_key' => (string) ($config['push_api_key'] ?? ''),
+				'app_id' => (string) ($config['push_app_id'] ?? ''),
+				'sender_id' => (string) ($config['push_sender_id'] ?? ''),
+				'project_id' => (string) ($config['push_project_id'] ?? '')
+			],
 			'csrf' => CCsrfTokenHelper::get('zbxview.connect.settings.update')
 		]));
 	}
