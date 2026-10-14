@@ -193,7 +193,7 @@
 				return;
 			}
 			say('zvc-s-cert-msg', '…', false);
-			post(Object.assign({action: 'check', hosts: hostList()}, certBody()))
+			post(Object.assign({mode: 'check', hosts: hostList()}, certBody()))
 				.then((r) => {
 					if (r.error !== undefined || !r.ok) {
 						setFileBox('bad', file.name, r.error || 'Error');
@@ -221,7 +221,7 @@
 			button.disabled = true;
 			say('zvc-s-msg', '…', false);
 			post(Object.assign({
-				action: 'save',
+				mode: 'save',
 				url: $('zvc-s-url').value,
 				name: $('zvc-s-name').value,
 				server_cert: serverCert(),

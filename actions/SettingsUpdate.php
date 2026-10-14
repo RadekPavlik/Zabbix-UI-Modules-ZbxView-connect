@@ -12,10 +12,10 @@ use Modules\ZbxViewConnect\Includes\Pairing;
 /**
  * The admin page's actions (JSON POST from settings.js):
  *
- * - action=check: checks an uploaded certificate (base64 of the file,
+ * - mode=check: checks an uploaded certificate (base64 of the file,
  *   password, hosts) without storing anything; answers its description and
  *   the preview data.
- * - action=save: stores everything at once - url, name, server_cert (0/1),
+ * - mode=save: stores everything at once - url, name, server_cert (0/1),
  *   cert_required (0/1) and, when a new file was chosen, the certificate
  *   (cert, cert_name, password) plus its hosts. A certificate is stored only
  *   when usable (EC key, key matches, password right); cert_required=0
@@ -29,7 +29,7 @@ class SettingsUpdate extends CController {
 
 	protected function checkInput(): bool {
 		$ret = $this->validateInput([
-			'action' => 'required|in check,save',
+			'mode' => 'required|in check,save',
 			'url' => 'string',
 			'name' => 'string',
 			'server_cert' => 'in 0,1',
@@ -74,7 +74,7 @@ class SettingsUpdate extends CController {
 			return;
 		}
 
-		if ($this->getInput('action') === 'check') {
+		if ($this->getInput('mode') === 'check') {
 			if ($upload === null) {
 				$this->respond(['error' => Lang::t('s_cc_no_file', 'Choose the certificate file first.')]);
 

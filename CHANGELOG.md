@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.6.1 — 2026-10-14
+
+- **Fix: Save on *Mobile configuration* always said "Invalid input."** The page
+  posted `action: save`, but for a JSON request Zabbix merges the URL's own
+  `action=zbxview.connect.settings.update` over the body, so the value never
+  reached the controller. The field is now called `mode`.
+
 ## 1.6.0 — 2026-10-09
 
 - **Push notifications through the organisation's own Firebase project.**
