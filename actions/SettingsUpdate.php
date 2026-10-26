@@ -41,7 +41,8 @@ class SettingsUpdate extends CController {
 			'push_api_key' => 'string',
 			'push_app_id' => 'string',
 			'push_sender_id' => 'string',
-			'push_project_id' => 'string'
+			'push_project_id' => 'string',
+			'displays' => 'in 0,1'
 		]);
 
 		if (!$ret) {
@@ -121,6 +122,7 @@ class SettingsUpdate extends CController {
 		$config['url'] = $url;
 		$config['name'] = trim((string) $this->getInput('name', ''));
 		$config['self_signed'] = (string) $this->getInput('server_cert', '0');
+		$config['displays'] = (string) $this->getInput('displays', '0');
 		$config = $push + $config;
 
 		if ((string) $this->getInput('cert_required', '0') === '0') {
@@ -197,7 +199,7 @@ class SettingsUpdate extends CController {
 
 	private static function hosts(string $raw): string {
 		return implode(',', array_values(array_unique(array_filter(array_map(
-			static fn($h) => strtolower(trim((string) $h)), preg_split('/[,;\s]+/', $raw)
+			[Pairing::class, 'hostOf'], preg_split('/[,;\s]+/', $raw)
 		), static fn($h) => $h !== ''))));
 	}
 

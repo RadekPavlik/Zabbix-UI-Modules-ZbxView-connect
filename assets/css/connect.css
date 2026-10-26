@@ -189,6 +189,9 @@
 .zvc-stack > div + div { border-top: 1px solid var(--zvc-border); }
 .zvc-stack small { display: block; color: var(--zvc-muted); font-size: 11px; margin-bottom: 3px; }
 .zvc-stack b { font-weight: 600; }
+/* Whether the code carries the mTLS client certificate: green when it does, amber when not. */
+.zvc-stack > .zvc-cc-in b { color: var(--zvc-ok); }
+.zvc-stack > .zvc-cc-none b { color: var(--zvc-warn-text); }
 .zvc-warn {
 	display: flex; gap: 10px; align-items: flex-start; margin: 18px 0;
 	padding: 12px 14px; border-radius: 8px; line-height: 1.45;

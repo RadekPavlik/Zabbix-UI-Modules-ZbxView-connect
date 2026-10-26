@@ -234,7 +234,9 @@ class Pairing {
 			'pin' => $pin,
 			// The organisation's own Firebase project for push notifications
 			// (null = none configured).
-			'push' => self::push($config)
+			'push' => self::push($config),
+			// The app's "Displays" key (signage displays of the ZbxView MDM module).
+			'displays' => in_array(strtolower(trim((string) ($config['displays'] ?? '0'))), ['1', 'true', 'yes'], true)
 		];
 	}
 
@@ -482,9 +484,9 @@ class Pairing {
 		// OpenSSL 3 exports PKCS#8 ("BEGIN PRIVATE KEY"), what the app expects.
 		openssl_pkey_export($key, $key_pem);
 
-		$list = array_values(array_filter(array_map(
-			static fn($h) => strtolower(trim((string) $h)), preg_split('/[,;\s]+/', $hosts)
-		), static fn($h) => $h !== ''));
+		$list = array_values(array_unique(array_filter(array_map(
+			[self::class, 'hostOf'], preg_split('/[,;\s]+/', $hosts)
+		), static fn($h) => $h !== '')));
 
 		$curve = (string) ($details['ec']['curve_name'] ?? '');
 		$curve_names = ['prime256v1' => 'P-256', 'secp384r1' => 'P-384', 'secp521r1' => 'P-521'];
@@ -500,6 +502,21 @@ class Pairing {
 	}
 
 	/**
+	 * A host name from what was typed as "Sent to": a bare host, a *.wildcard,
+	 * or a whole address (https://host:port/path - the app compares host names,
+	 * so a URL there meant the certificate was never offered).
+	 */
+	public static function hostOf(string $value): string {
+		$value = strtolower(trim($value));
+
+		if (strpos($value, '://') !== false) {
+			return (string) (parse_url($value, PHP_URL_HOST) ?? '');
+		}
+
+		return (string) preg_replace('/[:\/].*$/', '', $value);
+	}
+
+	/**
 	 * The zbxview://add link for $server (Pairing::server()), $token and the
 	 * client certificate (clientCert() result, may be []).
 	 */
@@ -509,7 +526,9 @@ class Pairing {
 			'name' => $server['name'],
 			'auth' => 'token',
 			'token' => $token,
-			'self_signed' => $server['self_signed'] ? '1' : '0'
+			'self_signed' => $server['self_signed'] ? '1' : '0',
+			// Always said, so a new code also turns the key off again.
+			'dsp' => !empty($server['displays']) ? '1' : '0'
 		] + (($server['pin'] ?? '') !== '' ? ['pin' => $server['pin']] : [])
 		+ (($server['push'] ?? null) !== null ? $server['push'] : [])
 		+ ($cert && !isset($cert['error']) ? array_filter([

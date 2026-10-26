@@ -226,6 +226,7 @@
 				name: $('zvc-s-name').value,
 				server_cert: serverCert(),
 				cert_required: required.checked ? '1' : '0',
+				displays: $('zvc-s-displays').checked ? '1' : '0',
 				hosts: hostList()
 			}, pushValues(), required.checked ? certBody() : {}))
 				.then((r) => {
@@ -250,7 +251,8 @@
 			const url = ($('zvc-s-url').value.trim() || root.dataset.urlAuto).replace(/\/+$/, '');
 			const name = $('zvc-s-name').value.trim() || root.dataset.nameAuto;
 			let link = 'zbxview://add?url=' + enc(url) + '&name=' + enc(name) + '&auth=token&token='
-				+ 'preview'.padEnd(64, '0') + '&self_signed=' + serverCert();
+				+ 'preview'.padEnd(64, '0') + '&self_signed=' + serverCert()
+				+ '&dsp=' + ($('zvc-s-displays').checked ? '1' : '0');
 			if (pushComplete()) {
 				const v = pushValues();
 				link += '&fk=' + enc(v.push_api_key) + '&fa=' + enc(v.push_app_id)
@@ -318,9 +320,11 @@
 			const n = hosts.length || 1;
 			$('zvc-p-cc').textContent = required.checked && preview.cc ? T.yes_hosts.replace('{n}', n) : T.no;
 			$('zvc-p-push').textContent = pushComplete() ? T.push_yes.replace('{p}', pushValues().push_project_id) : T.no;
+			$('zvc-p-dsp').textContent = $('zvc-s-displays').checked ? T.yes : T.no;
 		}
 
 		['zvc-s-url', 'zvc-s-name'].concat(Object.keys(PUSH)).forEach((id) => $(id).addEventListener('input', draw));
+		$('zvc-s-displays').addEventListener('change', draw);
 		renderChips();
 		draw();
 	}

@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.7.3 — 2026-10-26
+
+- **Mobile connect says whether the code carries the client certificate**:
+  a line under the code - green "In the code" with its CN and expiry, amber
+  when none is set or the stored one is unusable.
+- **Fix: "Sent to" given as an address** (`https://zabbix-app.example.com`)
+  went into the code as is, so the app never matched it to the server's host
+  and did not offer the certificate. Only host names are kept now (also for a
+  value saved before); the app (0.59.3) normalizes it too.
+
+## 1.7.2 — 2026-10-23
+
+- Mobile connect shows "Displays" next to the code when the code turns the
+  app's Displays key on (`dsp=1`).
+
+## 1.7.0 — 2026-10-13
+
+- **Displays in the app.** *Mobile configuration* has a fourth card with a
+  switch: on, the code carries `dsp=1` and the app (0.53+) shows a Displays
+  key in its header - the signage displays of the ZbxView MDM module with
+  restart app, reboot, switch on and standby. Off sends `dsp=0`, so a new
+  code turns the key off again. Who may run the commands is set on the
+  module's Zabbix scripts (menu Display).
+
 ## 1.6.1 — 2026-10-14
 
 - **Fix: Save on *Mobile configuration* always said "Invalid input."** The page

@@ -4,7 +4,7 @@
 	"type": "module",
 	"name": "ZbxView connect",
 	"namespace": "ZbxViewConnect",
-	"version": "1.6.1",
+	"version": "1.7.3",
 	"author": "Radek Pavlík",
 	"url": "https://github.com/RadekPavlik/Zabbix-UI-Modules-ZbxView-connect",
 	"description": "Pairs the ZbxView / Zabbix mobile app with a QR code: one API token per phone, never expiring once the phone has used it; a code nobody scans in 5 minutes is dropped again.",
@@ -45,6 +45,7 @@
 		"push_api_key": "",
 		"push_app_id": "",
 		"push_sender_id": "",
-		"push_project_id": ""
+		"push_project_id": "",
+		"displays": "0"
 	}
 }

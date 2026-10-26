@@ -55,6 +55,10 @@ class ConnectView extends CController {
 			'server_url' => $server['url'],
 			'server_name' => $server['name'],
 			'push' => $server['push'] !== null,
+			// The app's Displays key travels in the code too (dsp=1).
+			'displays' => !empty($server['displays']),
+			// The mTLS client certificate the code carries (cc/ck/ch): [] = none, error = unusable.
+			'client_cert' => Pairing::clientCert(),
 			// A token is useless to the app when the role may not use the API.
 			'api_access' => CWebUser::checkAccess('api.access'),
 			'devices' => $devices,

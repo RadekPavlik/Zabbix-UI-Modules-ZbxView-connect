@@ -152,6 +152,19 @@ $push_card = (new CDiv([
 	]))->addClass('zvc-card-body')
 ]))->addClass('zvc-card');
 
+// --- 4: signage displays in the app (ZbxView MDM) --------------------------
+$displays_card = (new CDiv([
+	$head('4', Lang::t('s_dsp_title', 'Displays in the app'),
+		Lang::t('s_dsp_sub', 'Adds a Displays key to the app header: the signage displays of the ZbxView MDM module, with restart app, reboot, switch on and standby. Who may run them is set on the Zabbix scripts (menu Display).'),
+		(new CTag('label', true, [
+			new CSpan(Lang::t('s_dsp_label', 'Show')),
+			(new CTag('input', false))->setAttribute('type', 'checkbox')->setId('zvc-s-displays')
+				->setAttribute($data['displays'] ? 'checked' : 'data-off', $data['displays'] ? 'checked' : '1'),
+			new CTag('i', true)
+		]))->addClass('zvc-switch')
+	)
+]))->addClass('zvc-card');
+
 $footer = (new CDiv([
 	(new CSimpleButton(Lang::t('save', 'Save')))->setId('zvc-s-save')->addClass('zvc-btn'),
 	(new CSimpleButton(Lang::t('s_discard', 'Discard changes')))->setId('zvc-s-discard')
@@ -183,7 +196,8 @@ $preview = (new CDiv([
 			$fact(Lang::t('name', 'Name'), '', 'zvc-p-name'),
 			$fact(Lang::t('s_cert_server', 'Server certificate'), '', 'zvc-p-sc'),
 			$fact(Lang::t('s_cc_short', 'Client certificate'), '', 'zvc-p-cc'),
-			$fact(Lang::t('s_push_short', 'Push notifications'), '', 'zvc-p-push')
+			$fact(Lang::t('s_push_short', 'Push notifications'), '', 'zvc-p-push'),
+			$fact(Lang::t('s_dsp_short', 'Displays'), '', 'zvc-p-dsp')
 		)))->addClass('zvc-facts'),
 		(new CLink([Ui::icon('external'), Lang::t('s_open_user', 'Open the page users see')],
 			(new CUrl('zabbix.php'))->setArgument('action', 'zbxview.connect')->getUrl()))
@@ -199,7 +213,7 @@ $preview = (new CDiv([
 	->addItem(
 		(new CDiv([
 			(new CDiv([
-				(new CDiv([$connection, $certificate, $push_card, $footer]))->addClass('zvc-col'),
+				(new CDiv([$connection, $certificate, $push_card, $displays_card, $footer]))->addClass('zvc-col'),
 				$preview
 			]))->addClass('zvc-grid')
 		]))
@@ -220,6 +234,7 @@ $preview = (new CDiv([
 				'self' => Lang::t('ss_self', 'Self-signed'),
 				'yes_hosts' => Lang::t('s_yes_hosts', 'Yes · {n} host(s)'),
 				'no' => Lang::t('no', 'No'),
+				'yes' => Lang::t('yes', 'Yes'),
 				'push_yes' => Lang::t('s_push_yes', 'Yes · {p}'),
 				'push_loaded' => Lang::t('s_push_loaded', 'Loaded from {file}.'),
 				'push_bad_file' => Lang::t('s_push_bad_file', 'This is not a google-services.json with an Android app.'),

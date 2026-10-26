@@ -72,7 +72,24 @@ $result = (new CDiv([
 			(new CDiv([new CTag('small', true, Lang::t('token', 'Token')), (new CTag('b', true, ''))->setId('zvc-token-name')->addClass('zvc-mono')])),
 			(new CDiv([new CTag('small', true, Lang::t('expires', 'Expires')), new CTag('b', true, Lang::t('never_once_used', 'Never, once the phone has used it'))])),
 			(new CDiv([new CTag('small', true, Lang::t('s_push_short', 'Push notifications')),
-				new CTag('b', true, $data['push'] ? Lang::t('push_in_code', 'In the code - the phone turns them on after the scan') : Lang::t('no', 'No'))]))
+				new CTag('b', true, $data['push'] ? Lang::t('push_in_code', 'In the code - the phone turns them on after the scan') : Lang::t('no', 'No'))])),
+			// The client certificate travels in the code: say so, or that there is none.
+			(new CDiv([new CTag('small', true, Lang::t('s_cc_short', 'Client certificate')),
+				new CTag('b', true, !$data['client_cert']
+					? Lang::t('cc_not_in_code', 'No - none is set in the module settings')
+					: (isset($data['client_cert']['error'])
+						? Lang::t('cc_unusable', 'Set but unusable - check it in the module settings')
+						: Lang::t('cc_in_code', 'In the code - for connecting through the gateway (mTLS)').': CN='
+							.$data['client_cert']['subject']
+							.($data['client_cert']['valid_to'] > 0
+								? ', '.Lang::t('s_valid_until', 'valid until').' '.zbx_date2str(DATE_FORMAT, $data['client_cert']['valid_to'])
+								: '')))
+			]))->addClass(!$data['client_cert'] || isset($data['client_cert']['error']) ? 'zvc-cc-none' : 'zvc-cc-in'),
+			// Only when the code turns it on: the Displays key in the app's header.
+			$data['displays']
+				? new CDiv([new CTag('small', true, Lang::t('s_dsp_short', 'Displays')),
+					new CTag('b', true, Lang::t('dsp_in_code', 'In the code - the app shows the Displays key after the scan'))])
+				: null
 		]))->addClass('zvc-stack')
 	]))->addClass('zvc-qr-row'),
 	(new CDiv([Ui::icon('warn'), new CSpan(Lang::t('secret_warn',

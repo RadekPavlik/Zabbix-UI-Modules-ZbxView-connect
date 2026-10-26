@@ -50,6 +50,9 @@ module.create  {"id": "zbxviewconnect", "relative_path": "modules/Zabbix-UI-Modu
   configuration*; the code hands it to the app and the phone turns push on
   after the scan. Zabbix side: the relay + "ZbxView Push" media type + action,
   see https://radekpavlik.github.io/zbxview/#push.
+- **Displays** (optional): a switch in *Mobile configuration* puts `dsp=1` in
+  the code and the app (0.53+) shows a Displays key in its header - the
+  signage displays of the ZbxView MDM module. Off sends `dsp=0`.
 
 ## Configuration (admin, once)
 
@@ -98,6 +101,10 @@ to, empty = the server's host).
   (0.49.0+) collects them in any order, shows "Scanned 1 of 3", reassembles
   the link and saves the certificate like an imported one.
 - Without a configured certificate nothing changes: one plain code.
+- *Mobile connect* says under the code whether it carries the certificate
+  (CN and expiry), or that none is set / the stored one is unusable.
+- The hosts are host names; an address typed there
+  (`https://zabbix.example.com/...`) is reduced to its host (since 1.7.3).
 
 Part format: `ZBXV1:<id>:<index>/<count>:<chunk>`; the chunks in index order
 are the `zbxview://add` link. Link parameters `cc` / `ck` = base64url (no
@@ -106,7 +113,7 @@ padding) of the certificate DER / PKCS#8 key DER, `ch` = hosts.
 ## QR format
 
 ```
-zbxview://add?url=<https://host/path>&name=<label>&auth=token&token=<api token>&self_signed=0|1[&pin=<sha256 hex>][&cc=..&ck=..&ch=..]
+zbxview://add?url=<https://host/path>&name=<label>&auth=token&token=<api token>&self_signed=0|1&dsp=0|1[&pin=<sha256 hex>][&fk=..&fa=..&fs=..&fp=..][&cc=..&ck=..&ch=..]
 ```
 
 URL-encoded (RFC 3986). `auth=password&user=<name>` is also understood by the
