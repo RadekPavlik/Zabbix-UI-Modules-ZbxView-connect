@@ -140,7 +140,10 @@ class ConnectCreate extends CController {
 			// The repair mark at the end of a name is ours, not the user's.
 			: rtrim(trim((string) $this->getInput('device', '')), '~ ');
 
-		if ($device_name === '') {
+		// Nobody named the device: the app (0.59.5+) names its token after the phone itself.
+		$unnamed = $device_name === '';
+
+		if ($unnamed) {
 			$device_name = $legacy;
 		}
 
@@ -169,7 +172,7 @@ class ConnectCreate extends CController {
 		$new_tokenid = (string) $result['tokenids'][0];
 		[['token' => $token]] = API::Token()->generate([$new_tokenid]);
 
-		$link = Pairing::link(Pairing::server(), $token, $client_cert);
+		$link = Pairing::link(Pairing::server(), $token, $client_cert, $unnamed ? $new_tokenid : '');
 
 		$this->respond([
 			'link' => $link,

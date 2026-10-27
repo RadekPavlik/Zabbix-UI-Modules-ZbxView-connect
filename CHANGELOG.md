@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.8.0 — 2026-10-27
+
+- **The phone's own name in the device list.** A device nobody named on the
+  page (first code, *Add another device* with the name left empty) gets
+  `tid=<tokenid>` in the code, and the app (0.59.5+) renames its token after
+  the phone - "ZbxView · Pixel 8" instead of "Phone (2)". A name typed on the
+  page, and a re-paired device, keep theirs (no `tid`).
+
 ## 1.7.3 — 2026-10-26
 
 - **Mobile connect says whether the code carries the client certificate**:

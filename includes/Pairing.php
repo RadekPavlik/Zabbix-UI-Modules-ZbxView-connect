@@ -517,10 +517,11 @@ class Pairing {
 	}
 
 	/**
-	 * The zbxview://add link for $server (Pairing::server()), $token and the
-	 * client certificate (clientCert() result, may be []).
+	 * The zbxview://add link for $server (Pairing::server()), $token, the
+	 * client certificate (clientCert() result, may be []) and the token's id
+	 * for the app to name it after the phone ('' = the device has a name).
 	 */
-	public static function link(array $server, string $token, array $cert): string {
+	public static function link(array $server, string $token, array $cert, string $tokenid = ''): string {
 		return 'zbxview://add?'.http_build_query([
 			'url' => $server['url'],
 			'name' => $server['name'],
@@ -529,7 +530,10 @@ class Pairing {
 			'self_signed' => $server['self_signed'] ? '1' : '0',
 			// Always said, so a new code also turns the key off again.
 			'dsp' => !empty($server['displays']) ? '1' : '0'
-		] + (($server['pin'] ?? '') !== '' ? ['pin' => $server['pin']] : [])
+		]
+		// The token's id when nobody named the device: the app renames it after the phone.
+		+ ($tokenid !== '' ? ['tid' => $tokenid] : [])
+		+ (($server['pin'] ?? '') !== '' ? ['pin' => $server['pin']] : [])
 		+ (($server['push'] ?? null) !== null ? $server['push'] : [])
 		+ ($cert && !isset($cert['error']) ? array_filter([
 			'cc' => $cert['cc'],

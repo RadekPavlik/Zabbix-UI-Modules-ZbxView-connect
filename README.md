@@ -113,7 +113,7 @@ padding) of the certificate DER / PKCS#8 key DER, `ch` = hosts.
 ## QR format
 
 ```
-zbxview://add?url=<https://host/path>&name=<label>&auth=token&token=<api token>&self_signed=0|1&dsp=0|1[&pin=<sha256 hex>][&fk=..&fa=..&fs=..&fp=..][&cc=..&ck=..&ch=..]
+zbxview://add?url=<https://host/path>&name=<label>&auth=token&token=<api token>&self_signed=0|1&dsp=0|1[&tid=<tokenid>][&pin=<sha256 hex>][&fk=..&fa=..&fs=..&fp=..][&cc=..&ck=..&ch=..]
 ```
 
 URL-encoded (RFC 3986). `auth=password&user=<name>` is also understood by the
