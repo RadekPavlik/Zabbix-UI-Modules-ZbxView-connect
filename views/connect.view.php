@@ -89,6 +89,10 @@ $result = (new CDiv([
 			$data['displays']
 				? new CDiv([new CTag('small', true, Lang::t('s_dsp_short', 'Displays')),
 					new CTag('b', true, Lang::t('dsp_in_code', 'In the code - the app shows the Displays key after the scan'))])
+				: null,
+			$data['headers']
+				? new CDiv([new CTag('small', true, Lang::t('s_hdr_short', 'Custom HTTP headers')),
+					(new CTag('b', true, implode(', ', $data['headers'])))->addClass('zvc-mono')])
 				: null
 		]))->addClass('zvc-stack')
 	]))->addClass('zvc-qr-row'),

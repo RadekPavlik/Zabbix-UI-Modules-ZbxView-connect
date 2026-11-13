@@ -57,6 +57,8 @@ class ConnectView extends CController {
 			'push' => $server['push'] !== null,
 			// The app's Displays key travels in the code too (dsp=1).
 			'displays' => !empty($server['displays']),
+			// Names of the custom HTTP headers the code carries (never their values).
+			'headers' => array_map(static fn(string $h): string => strstr($h, ':', true), $server['headers']),
 			// The mTLS client certificate the code carries (cc/ck/ch): [] = none, error = unusable.
 			'client_cert' => Pairing::clientCert(),
 			// A token is useless to the app when the role may not use the API.

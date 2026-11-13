@@ -57,6 +57,7 @@ class SettingsView extends CController {
 				'project_id' => (string) ($config['push_project_id'] ?? '')
 			],
 			'displays' => (string) ($config['displays'] ?? '0') === '1',
+			'headers' => (string) ($config['custom_headers'] ?? ''),
 			'csrf' => CCsrfTokenHelper::get('zbxview.connect.settings.update')
 		]));
 	}

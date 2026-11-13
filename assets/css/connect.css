@@ -86,6 +86,7 @@
 	background: var(--zvc-input); color: var(--zvc-text);
 	border: 1px solid var(--zvc-border); border-radius: 6px; font-size: 14px;
 }
+.zvc .zvc-input.zvc-textarea { height: auto; min-height: 72px; padding: 8px 12px; resize: vertical; line-height: 1.5; }
 .zvc .zvc-input:focus { outline: 2px solid var(--zvc-accent); outline-offset: -1px; }
 .zvc-mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
 .zvc-hint { margin-top: 6px; font-size: 12px; line-height: 1.45; color: var(--zvc-muted); }

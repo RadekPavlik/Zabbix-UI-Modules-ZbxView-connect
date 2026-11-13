@@ -165,6 +165,23 @@ $displays_card = (new CDiv([
 	)
 ]))->addClass('zvc-card');
 
+// --- 5: custom HTTP headers (e.g. Cloudflare Access service token) --------
+$headers_card = (new CDiv([
+	$head('5', Lang::t('s_hdr_title', 'Custom HTTP headers'),
+		Lang::t('s_hdr_sub', 'Sent by the app with every request to the server - for a gateway in front of Zabbix that wants its own, such as the service token of a Cloudflare Access application.')),
+	(new CDiv([
+		$field(Lang::t('s_hdr_label', 'One "Name: value" per line'),
+			(new CTag('textarea', true, $data['headers']))
+				->setId('zvc-s-headers')
+				->addClass('zvc-input')->addClass('zvc-mono')->addClass('zvc-textarea')
+				->setAttribute('rows', '3')
+				->setAttribute('spellcheck', 'false')
+				->setAttribute('autocomplete', 'off')
+				->setAttribute('placeholder', "CF-Access-Client-Id: …\nCF-Access-Client-Secret: …"),
+			Lang::t('s_hdr_hint', 'Values travel in the code like the API token. Authorization, Content-Type and Host are set by the app and cannot be used. Needs app 0.66.0 or later.'))
+	]))->addClass('zvc-card-body')
+]))->addClass('zvc-card');
+
 $footer = (new CDiv([
 	(new CSimpleButton(Lang::t('save', 'Save')))->setId('zvc-s-save')->addClass('zvc-btn'),
 	(new CSimpleButton(Lang::t('s_discard', 'Discard changes')))->setId('zvc-s-discard')
@@ -197,7 +214,8 @@ $preview = (new CDiv([
 			$fact(Lang::t('s_cert_server', 'Server certificate'), '', 'zvc-p-sc'),
 			$fact(Lang::t('s_cc_short', 'Client certificate'), '', 'zvc-p-cc'),
 			$fact(Lang::t('s_push_short', 'Push notifications'), '', 'zvc-p-push'),
-			$fact(Lang::t('s_dsp_short', 'Displays'), '', 'zvc-p-dsp')
+			$fact(Lang::t('s_dsp_short', 'Displays'), '', 'zvc-p-dsp'),
+			$fact(Lang::t('s_hdr_short', 'Custom HTTP headers'), '', 'zvc-p-hdr')
 		)))->addClass('zvc-facts'),
 		(new CLink([Ui::icon('external'), Lang::t('s_open_user', 'Open the page users see')],
 			(new CUrl('zabbix.php'))->setArgument('action', 'zbxview.connect')->getUrl()))
@@ -213,7 +231,7 @@ $preview = (new CDiv([
 	->addItem(
 		(new CDiv([
 			(new CDiv([
-				(new CDiv([$connection, $certificate, $push_card, $displays_card, $footer]))->addClass('zvc-col'),
+				(new CDiv([$connection, $certificate, $push_card, $displays_card, $headers_card, $footer]))->addClass('zvc-col'),
 				$preview
 			]))->addClass('zvc-grid')
 		]))

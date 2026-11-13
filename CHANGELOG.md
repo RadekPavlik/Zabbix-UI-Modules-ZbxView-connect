@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.9.0 — 2026-11-13
+
+- **Custom HTTP headers in the code.** *Mobile configuration* has a fifth
+  card: "Name: value" lines the app (0.66.0+) sends with every request to the
+  server - for a gateway in front of Zabbix that wants its own, such as a
+  Cloudflare Access service token (`CF-Access-Client-Id` /
+  `CF-Access-Client-Secret`). They travel as `hdr` (lines joined by a
+  newline); Authorization, Content-Type, Host and the like are refused on
+  save. *Mobile connect* names the headers next to the code (never the
+  values).
+
 ## 1.8.0 — 2026-10-27
 
 - **The phone's own name in the device list.** A device nobody named on the

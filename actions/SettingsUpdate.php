@@ -42,7 +42,8 @@ class SettingsUpdate extends CController {
 			'push_app_id' => 'string',
 			'push_sender_id' => 'string',
 			'push_project_id' => 'string',
-			'displays' => 'in 0,1'
+			'displays' => 'in 0,1',
+			'headers' => 'string'
 		]);
 
 		if (!$ret) {
@@ -119,7 +120,18 @@ class SettingsUpdate extends CController {
 			return;
 		}
 
+		$headers = Pairing::headers((string) $this->getInput('headers', ''));
+
+		if (isset($headers['error'])) {
+			$this->respond(['error' => str_replace('{n}', (string) $headers['error'], $headers['reserved']
+				? Lang::t('err_headers_reserved', 'Custom headers, line {n}: the app sets this header itself.')
+				: Lang::t('err_headers', 'Custom headers, line {n}: expected "Name: value".'))]);
+
+			return;
+		}
+
 		$config['url'] = $url;
+		$config['custom_headers'] = implode("\n", $headers);
 		$config['name'] = trim((string) $this->getInput('name', ''));
 		$config['self_signed'] = (string) $this->getInput('server_cert', '0');
 		$config['displays'] = (string) $this->getInput('displays', '0');

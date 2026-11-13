@@ -236,8 +236,47 @@ class Pairing {
 			// (null = none configured).
 			'push' => self::push($config),
 			// The app's "Displays" key (signage displays of the ZbxView MDM module).
-			'displays' => in_array(strtolower(trim((string) ($config['displays'] ?? '0'))), ['1', 'true', 'yes'], true)
+			'displays' => in_array(strtolower(trim((string) ($config['displays'] ?? '0'))), ['1', 'true', 'yes'], true),
+			// Custom HTTP headers the app sends with every request ("Name: value"
+			// lines), e.g. a Cloudflare Access service token. A stored value
+			// that no longer parses is left out rather than breaking the code.
+			'headers' => array_filter(self::headers((string) ($config['custom_headers'] ?? '')), 'is_int',
+				ARRAY_FILTER_USE_KEY)
 		];
+	}
+
+	/** Headers the app sets itself; a custom one of these would break its API calls. */
+	public const RESERVED_HEADERS = ['authorization', 'content-type', 'content-length', 'host', 'connection',
+		'transfer-encoding'];
+
+	/**
+	 * Custom HTTP headers for the app (`hdr` in the code, app 0.66.0+): one
+	 * "Name: value" per line, empty lines skipped. Returns the normalized
+	 * lines, or ['error' => <1-based line>, 'reserved' => bool] for the first
+	 * line that is no header the app may send.
+	 */
+	public static function headers(string $text): array {
+		$out = [];
+
+		foreach (preg_split('/\r?\n/', $text) as $i => $line) {
+			$line = trim($line);
+
+			if ($line === '') {
+				continue;
+			}
+
+			$pos = strpos($line, ':');
+			$name = $pos !== false && $pos > 0 ? trim(substr($line, 0, $pos)) : '';
+			$reserved = in_array(strtolower($name), self::RESERVED_HEADERS, true);
+
+			if ($name === '' || $reserved || !preg_match('/^[!#$%&\'*+.^_`|~0-9A-Za-z-]+$/', $name)) {
+				return ['error' => $i + 1, 'reserved' => $reserved];
+			}
+
+			$out[] = $name.': '.trim(substr($line, $pos + 1));
+		}
+
+		return $out;
 	}
 
 	/** Module config keys of the Firebase project, in the order the code carries them (fk, fa, fs, fp). */
@@ -535,6 +574,7 @@ class Pairing {
 		+ ($tokenid !== '' ? ['tid' => $tokenid] : [])
 		+ (($server['pin'] ?? '') !== '' ? ['pin' => $server['pin']] : [])
 		+ (($server['push'] ?? null) !== null ? $server['push'] : [])
+		+ (($server['headers'] ?? []) !== [] ? ['hdr' => implode("\n", $server['headers'])] : [])
 		+ ($cert && !isset($cert['error']) ? array_filter([
 			'cc' => $cert['cc'],
 			'ck' => $cert['ck'],

@@ -227,6 +227,7 @@
 				server_cert: serverCert(),
 				cert_required: required.checked ? '1' : '0',
 				displays: $('zvc-s-displays').checked ? '1' : '0',
+				headers: $('zvc-s-headers').value,
 				hosts: hostList()
 			}, pushValues(), required.checked ? certBody() : {}))
 				.then((r) => {
@@ -247,6 +248,11 @@
 		// --- preview --------------------------------------------------------
 		const enc = (s) => encodeURIComponent(s).replace(/[!'()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase());
 
+		// "Name: value" lines as the code carries them (the server checks them on save).
+		const headerLines = () => $('zvc-s-headers').value.split(/\r?\n/)
+			.map((l) => l.trim()).filter((l) => l.indexOf(':') > 0)
+			.map((l) => l.slice(0, l.indexOf(':')).trim() + ': ' + l.slice(l.indexOf(':') + 1).trim());
+
 		function buildParts() {
 			const url = ($('zvc-s-url').value.trim() || root.dataset.urlAuto).replace(/\/+$/, '');
 			const name = $('zvc-s-name').value.trim() || root.dataset.nameAuto;
@@ -257,6 +263,10 @@
 				const v = pushValues();
 				link += '&fk=' + enc(v.push_api_key) + '&fa=' + enc(v.push_app_id)
 					+ '&fs=' + enc(v.push_sender_id) + '&fp=' + enc(v.push_project_id);
+			}
+			const hdr = headerLines();
+			if (hdr.length) {
+				link += '&hdr=' + enc(hdr.join('\n'));
 			}
 			if (required.checked && preview.cc) {
 				link += '&cc=' + preview.cc + '&ck=' + 'A'.repeat(preview.ck_len);
@@ -321,9 +331,10 @@
 			$('zvc-p-cc').textContent = required.checked && preview.cc ? T.yes_hosts.replace('{n}', n) : T.no;
 			$('zvc-p-push').textContent = pushComplete() ? T.push_yes.replace('{p}', pushValues().push_project_id) : T.no;
 			$('zvc-p-dsp').textContent = $('zvc-s-displays').checked ? T.yes : T.no;
+			$('zvc-p-hdr').textContent = hdr.length ? hdr.map((h) => h.split(':')[0].trim()).join(', ') : T.no;
 		}
 
-		['zvc-s-url', 'zvc-s-name'].concat(Object.keys(PUSH)).forEach((id) => $(id).addEventListener('input', draw));
+		['zvc-s-url', 'zvc-s-name', 'zvc-s-headers'].concat(Object.keys(PUSH)).forEach((id) => $(id).addEventListener('input', draw));
 		$('zvc-s-displays').addEventListener('change', draw);
 		renderChips();
 		draw();
